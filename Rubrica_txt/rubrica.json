@@ -1,0 +1,1 @@
+"{\n \"0\": {\n  \"nome\": \"emiliano\",\n  \"cognome\": \"marrale\",\n  \"numeri\": {\n   \"casa\": \"333\",\n   \"cellulare\": \"444\"\n  },\n  \"n_numeri\": 2\n },\n \"1\": {\n  \"nome\": \"Carlo\",\n  \"cognome\": \"Magno\",\n  \"numeri\": {\n   \"lavoro\": \"111\"\n  },\n  \"n_numeri\": 1\n }\n}"
