@@ -10,3 +10,4 @@ settimana = d2.get_week()
 
 print(giorno)
 print(settimana)
+print(ciao)
