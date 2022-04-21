@@ -1,0 +1,148 @@
+CREATE USER admin IDENTIFIED WITH plaintext_password BY admin GRANT ANY
+
+https://clickhouse.com/docs/en/interfaces/cli/  <-- qui ci sono i comandi per il login e altro
+
+clickhouse-client -u user --password
+
+cat ~/learningpython/manipulation/data/edit-sales-2m.csv | clickhouse-client -u admin --password admin -q "INSERT INTO sales.sales2m FORMAT CSVWithNames"
+
+grant all on *.* to admin with grant option
+
+ALTER USER admin IDENTIFIED BY '<new password>'
+
+DROP USER <username>
+
+select currentDatabase()
+
+select currentUser()
+
+use db_name <--seleziona il database
+
+show tables <--mostra le tabelle nel database selezionato
+
+
+create table sales.sales2m(
+	"Id" Int32,
+	"Region" String,
+	"Country" String,
+	"Item Type" String,
+	"Sales Channel" String,
+	"Order Priority" String,
+	"Order Date" Date,
+	"Order ID" Int32,
+	"Ship Date" Date,
+	"Units Sold" Int16,
+	"Unit Price" Float32,
+	"Unit Cost" Float32,
+	"Total Revenue" Float64,
+	"Total Cost" Float64,
+	"Total Profit" Float64
+	)
+	ENGINE = Log()
+	
+create table sales.sales100prova1(
+	Region String,
+	Country String,
+	ItemType String,
+	SalesChannel String,
+	OrderPriority String,
+	OrderDate Date,
+	OrderID Int32,
+	ShipDate Date,
+	UnitsSold Int16,
+	UnitPrice Float32,
+	UnitCost Float32,
+	TotalRevenue Float64,
+	TotalCost Float64,
+	TotalProfit Float64
+	)
+	ENGINE = Log()
+	
+headers = ['Region',
+	'Country',
+	'ItemType',
+	'SalesChannel',
+	'OrderPriority',
+	'OrderDate',
+	'OrderID',
+	'ShipDate',
+	'UnitsSold',
+	'UnitPrice',
+	'UnitCost',
+	'TotalRevenue',
+	'TotalCost',
+	'TotalProfit'
+	]
+	
+create table sales.sales100prova2(
+	uno String,
+	due String,
+	tre String,
+	quattro String,
+	cinque String,
+	sei Date,
+	sette Int32,
+	otto Date,
+	nove Int16,
+	dieci Float32,
+	undici Float32,
+	dodici Float64,
+	tredici Float64,
+	quattordici Float64
+	)
+	ENGINE = Log()
+	
+https://stackoverflow.com/questions/60174383/how-do-i-change-the-date-format-from-mm-dd-yyyy-to-dd-mm-yyyy-in-libreoffice-cal
+
+https://glogg.bonnefon.org/download.html
+
+
+cat ~/Downloads/sales-5.csv | clickhouse-client -u admin --password admin --query="INSERT INTO sales.sales5 SELECT ItemType, toDate(parseDateTimeBestEffort(OrderDate)) AS OrderDate from input('ItemType String,OrderDate String') FORMAT CSVWithNames"
+
+
+cat ~/Downloads/sales-2m.csv | clickhouse-client -u admin --password admin --query="INSERT INTO sales.sales2m SELECT Region, Country, ItemType, SalesChannel, OrderPriority, toDate(parseDateTimeBestEffort(OrderDate)) AS OrderDate, OrderID, toDate(parseDateTimeBestEffort(ShipDate)) AS ShipDate, UnitsSold, UnitPrice, UnitCost, TotalRevenue, TotalCost, TotalProfit from input('Region String, Country String, ItemType String, SalesChannel String, OrderPriority String, OrderDate String, OrderID Int32, ShipDate String, UnitsSold Int16, UnitPrice Float32, UnitCost Float32, TotalRevenue Float64, TotalCost Float64, TotalProfit Float64') FORMAT CSVWithNames"
+
+
+Alla fine basta utilizzare un piccolo script python per convertire tutte le colonne
+con le date nel formato sbagliato in quello giusto, e poi popolare la tabella semplicemente
+con: 
+
+cat ./Downloads/sales-100.csv | clickhouse-client -u admin --password admin -q "INSERT INTO sales.sales FORMAT CSVWithNames"
+
+N.B. pandas aggiunge automaticamente una colonna(riga) con degli indici di riga in ordine crescete da 0->len(file.csv) ma non mette il nome di questa nuova colonna, mette solo una virgola prima della prima colonna. Quindi occorre evitare questa cosa oppure mettere un nome alla colonna  e creare la tabella di conseguenza
+
+per evitare aggiungere il parametro index=False come parametro di to_csv()
+parametro header=False per non scrivere nel file gli header (nomi colonne)
+
+
+
+
+rename table old_name to new_name
+
+
+create table sales.sale5(
+	ItemType String,
+	OrderDate Date
+	)
+	ENGINE = Log()
+	
+truncate table nome_tabella <-- cancella il contenuto ma non la tabella
+
+
+create table bt.bt100(
+	"Date" Date,
+	"Description" String,
+	"Deposits" Float32,
+	"Withdrawls" Float32,
+	"Balance" Float32
+	)
+	engine = Log()
+	
+cat ~/CSVs/bt/cleaned/edit-bt100.csv | clickhouse-client -u admin --password admin -q "INSERT INTO bt.bt100 SELECT Date, Description, toFloat32OrZero(toString(Deposits)) AS Deposits, toFloat32OrZero(toString(Withdrawls)) AS Withdrawls, toFloat32OrZero(toString(Balance)) AS Balance FROM input('Date Date,Description String,Deposits String,Withdrawls String,Balance String') FORMAT CSVWithNames"
+
+cat ~/CSVs/bt/cleaned/edit-bt100.tsv | clickhouse-client -u admin --password admin -q "INSERT INTO bt.bt100 SELECT Date, Description,Deposits,Withdrawls, Balance FROM input('Date Date,Description String,Deposits Float32,Withdrawls Float32,Balance Float32') FORMAT TSVWithNames"
+	
+
+
+
+
