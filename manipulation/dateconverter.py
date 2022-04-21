@@ -20,13 +20,14 @@ pd.set_option('display.width', 1000)
  
 
 file_path = '~/CSVs/'
-nome_file = 'sales-2m'
+nome_file = 'sales-1M'
+ext = '.csv'
 output_path = file_path
 
 
-print("Lettura file "+nome_file+'.csv')
+print("Lettura file "+nome_file+ext)
 time0 = time.time()
-df = pd.read_csv(file_path+nome_file+'.csv')
+df = pd.read_csv(file_path+nome_file+ext)
 print("File letto in %.2f s\n"% (time.time() - time0))
 
 
@@ -41,8 +42,8 @@ df["Ship Date"]= pd.to_datetime(df["Ship Date"])
 print("Ship Date comletata! %.2f s\n" % (time.time() - time2))
 
 time3 = time.time()
-print("Scrittura su "+'edit-'+nome_file+'.csv ...')
-df.to_csv(output_path+'edit-'+nome_file+'.csv')
+print("Scrittura su "+'edit-'+nome_file+ext+' ...')
+df.to_csv(output_path+'edit-'+nome_file+ext)
 print("File scritto in %.2f s\n" % (time.time() - time3))
 
 print("Tempo totale: %.2f s" % (time.time() - time0))
