@@ -4,7 +4,15 @@ https://clickhouse.com/docs/en/interfaces/cli/  <-- qui ci sono i comandi per il
 
 clickhouse-client -u user --password
 
-cat ~/learningpython/manipulation/data/edit-sales-2m.csv | clickhouse-client -u admin --password admin -q "INSERT INTO sales.sales2m FORMAT CSVWithNames"
+cat ~/CSVs/sales/cleaned/edit-sales-5M.csv | clickhouse-client -u admin --password admin -q "INSERT INTO sales.5mSum FORMAT CSVWithNames"
+
+create materialized view sales.itemtype_totalrevenue Engine=SummingMergeTree() order by `Item Type` populate as select `Item Type`, sum(`Total Revenue`) from sales.5mtree group by `Item Type`
+
+create materialized view itemtype_totalprofit2 Engine=SummingMergeTree() order by `Item Type` populate as select `Item Type`,`Total Profit` from sales.5mtree group by `Item Type`
+
+create materialized view profit Engine=ReplacingMergeTree() order by `Region` populate as select `Item Type`,`Region`,`Total Profit` from sales.5mtree group by `Item Type`,`Region`
+
+
 
 grant all on *.* to admin with grant option
 
@@ -21,8 +29,7 @@ use db_name <--seleziona il database
 show tables <--mostra le tabelle nel database selezionato
 
 
-create table sales.sales2m(
-	"Id" Int32,
+create table sales.5mSum(
 	"Region" String,
 	"Country" String,
 	"Item Type" String,
@@ -38,7 +45,8 @@ create table sales.sales2m(
 	"Total Cost" Float64,
 	"Total Profit" Float64
 	)
-	ENGINE = Log()
+	ENGINE = SummingMergeTree()
+	order by `Order ID`
 	
 create table sales.sales100prova1(
 	Region String,
@@ -97,7 +105,7 @@ https://stackoverflow.com/questions/60174383/how-do-i-change-the-date-format-fro
 https://glogg.bonnefon.org/download.html
 
 
-cat ~/Downloads/sales-5.csv | clickhouse-client -u admin --password admin --query="INSERT INTO sales.sales5 SELECT ItemType, toDate(parseDateTimeBestEffort(OrderDate)) AS OrderDate from input('ItemType String,OrderDate String') FORMAT CSVWithNames"
+cat ~/CSVs/sales/cleaned/edit-sales-5M.csv | clickhouse-client -u admin --password admin --query="INSERT INTO sales.sales5 SELECT ItemType, toDate(parseDateTimeBestEffort(OrderDate)) AS OrderDate from input('ItemType String,OrderDate String') FORMAT CSVWithNames"
 
 
 cat ~/Downloads/sales-2m.csv | clickhouse-client -u admin --password admin --query="INSERT INTO sales.sales2m SELECT Region, Country, ItemType, SalesChannel, OrderPriority, toDate(parseDateTimeBestEffort(OrderDate)) AS OrderDate, OrderID, toDate(parseDateTimeBestEffort(ShipDate)) AS ShipDate, UnitsSold, UnitPrice, UnitCost, TotalRevenue, TotalCost, TotalProfit from input('Region String, Country String, ItemType String, SalesChannel String, OrderPriority String, OrderDate String, OrderID Int32, ShipDate String, UnitsSold Int16, UnitPrice Float32, UnitCost Float32, TotalRevenue Float64, TotalCost Float64, TotalProfit Float64') FORMAT CSVWithNames"
@@ -136,13 +144,62 @@ create table bt.bt100(
 	"Withdrawls" Float32,
 	"Balance" Float32
 	)
-	engine = Log()
+	engine = MergeTree()
+	order by Date
 	
 cat ~/CSVs/bt/cleaned/edit-bt100.csv | clickhouse-client -u admin --password admin -q "INSERT INTO bt.bt100 SELECT Date, Description, toFloat32OrZero(toString(Deposits)) AS Deposits, toFloat32OrZero(toString(Withdrawls)) AS Withdrawls, toFloat32OrZero(toString(Balance)) AS Balance FROM input('Date Date,Description String,Deposits String,Withdrawls String,Balance String') FORMAT CSVWithNames"
 
-cat ~/CSVs/bt/cleaned/edit-bt100.tsv | clickhouse-client -u admin --password admin -q "INSERT INTO bt.bt100 SELECT Date, Description,Deposits,Withdrawls, Balance FROM input('Date Date,Description String,Deposits Float32,Withdrawls Float32,Balance Float32') FORMAT TSVWithNames"
+cat ~/CSVs/bt/cleaned/edit-bt100.tsv | clickhouse-client -u admin --password admin -q "INSERT INTO bt.bt100 FORMAT TSVWithNames"
 	
+	
+insert into 5mSum ( `Region`,
+	`Country`,
+	`Item Type`,
+	`Sales Channel`,
+	`Order Priority`,
+	`Order Date`,
+	`Order ID`,
+	`Ship Date`,
+	`Units Sold`,
+	`Unit Price`,
+	`Unit Cost`,
+	`Total Revenue`,
+	`Total Cost`,
+	`Total Profit`)
+	values ( 'Europe',
+	'Italy',
+	'Fruits',
+	'Offline',
+	'M',
+	2020-04-18,
+	9999999876,
+	2020-05-18,
+	44,
+	90.9,
+	78.8,
+	36000.29,
+	15000.2,
+	21000.09
+	)
+	
+	
+create table sales.supersales3(
+	id String,
+	Gender String,
+	ProductLine String,
+	UnitPrice Float32,
+	Quantity UInt16,
+	Date Date
+	)
+	Engine=ReplacingMergeTree()
+	order by Gender
 
+Creando una tabella con MergeTree o simili, la chiave che si mette in order by 
+deve essere univoca.
+Mettendo Gender (={'Male','Female'})
+
+
+insert into supersales (*) values ('111-111-111', 'Male', 'Sports and travel', 20, 7, 2022-05-21)
 
 
 

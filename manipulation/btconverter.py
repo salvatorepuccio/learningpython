@@ -29,7 +29,7 @@ headers = [
  
 
 input_folder = '~/CSVs/bt/'
-input_file_name = 'bt100'
+input_file_name = 'bt5M'
 ext = '.csv'
 input_file_absolute_path = input_folder+input_file_name+ext
 output_folder = input_folder+'cleaned/'
@@ -90,7 +90,7 @@ print("File scritto in %.2f s\n" % (time.time() - timen))
 
 print("Tempo totale: %.2f s" % (time.time() - time0))
 time.sleep(1)
-os.system("glogg ~/CSVs/bt/cleaned/edit-bt100.tsv")
+#os.system("glogg ~/CSVs/bt/cleaned/edit-bt100.tsv")
 
 
 #print(df.head(10).to_string(index=False)+'\n')
