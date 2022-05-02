@@ -13,7 +13,7 @@ client = Client(
                 )
 
 client.execute("use chpv")
-sql = 'Select data_format_date,sum(qta_non_offerta) from dump group by data_format_date'
+sql = "Select data_format_date,sum(qta_non_offerta) from dump where data_format_date between '2020-01-01' and '2020-01-31' group by data_format_date"
 # cols = ['id','cod_cli_for', 'rag_soc', 'cod_prod', 'descr_prod', 'data_doc', 'data_format_date', 'qta_offerta', 'qta_non_offerta', 'val_off', 'val_non_off']
 columns = ['data','somma_venduto_non_offerta']
 query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
