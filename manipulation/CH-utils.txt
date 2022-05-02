@@ -4,7 +4,7 @@ https://clickhouse.com/docs/en/interfaces/cli/  <-- qui ci sono i comandi per il
 
 clickhouse-client -u user --password
 
-cat ~/CSVs/sales/cleaned/edit-sales-5M.csv | clickhouse-client -u admin --password admin -q "INSERT INTO sales.5mSum FORMAT CSVWithNames"
+cat ~/CSVs/sales/cleaned/edit-sales-2M.tsv | clickhouse-client -u default --password default -q "INSERT INTO sales.2m FORMAT TSVWithNames"
 
 create materialized view sales.itemtype_totalrevenue Engine=SummingMergeTree() order by `Item Type` populate as select `Item Type`, sum(`Total Revenue`) from sales.5mtree group by `Item Type`
 
@@ -16,7 +16,8 @@ create materialized view profit Engine=ReplacingMergeTree() order by `Region` po
 
 grant all on *.* to admin with grant option
 
-ALTER USER admin IDENTIFIED BY '<new password>'
+
+ USER admin IDENTIFIED BY '<new password>'
 
 DROP USER <username>
 
@@ -48,7 +49,7 @@ create table sales.5mSum(
 	ENGINE = SummingMergeTree()
 	order by `Order ID`
 	
-create table sales.sales100prova1(
+create table sales.2m(
 	Region String,
 	Country String,
 	ItemType String,
@@ -64,7 +65,8 @@ create table sales.sales100prova1(
 	TotalCost Float64,
 	TotalProfit Float64
 	)
-	ENGINE = Log()
+	ENGINE = MergeTree()
+    order by OrderID
 	
 headers = ['Region',
 	'Country',
@@ -194,12 +196,75 @@ create table sales.supersales3(
 	Engine=ReplacingMergeTree()
 	order by Gender
 
+create table chpv.dump(
+    id UInt64,
+    cod_cli_for String, 
+    rag_soc String, 
+    cod_prod String, 
+    descr_prod String, 
+    data_doc UInt64, 
+    data_format_date Date, 
+    qta_offerta Float64,    
+    qta_non_offerta Float64, 
+    val_off Float64, 
+    val_non_off Float64) 
+Engine=MergeTree()
+order by id
+
+cat ~/CSVs/newdump.tsv | clickhouse-client -u savato --password savato -q "INSERT INTO chpv.dump FORMAT TSVWithNames"
+
 Creando una tabella con MergeTree o simili, la chiave che si mette in order by 
 deve essere univoca.
 Mettendo Gender (={'Male','Female'})
 
 
 insert into supersales (*) values ('111-111-111', 'Male', 'Sports and travel', 20, 7, 2022-05-21)
+
+ssh pentaho@192.168.89.60 "mysqldump -u bi -p chpv.view_pv_tabellone | gzip -9" > ./dblocal.sql.gz
+
+ssh pentaho@192.168.89.60 "clickhouse-client -u bi --password chpv.view_pv_tabellone | gzip -9" > ./dblocal.sql.gz 
+
+SELECT cod_cli_for, rag_soc, cod_prod, descr_prod, data_doc, data_format_date, qta_offerta, qta_non_offerta, val_off, val_non_off FROM chpv.view_pv_tabellone INTO OUTFILE 'dump.tsv'
+
+scp pentaho@192.168.89.60:/home/pentaho/dump.tsv ./CSVs/
+
+insert into mindsdb.predictors(name,predict,select_data_query) values ('testPredictor', 'quantity', 'select * from sales.supersales')
+
+python3 -m mindsdb --api=mysql --config=/home/savato/mindsdb1/config.json
+
+
+python3 -m mindsdb --api mysql --config ./config.json
+
+INSERT INTO predictors(name, predict, select_data_query) VALUES ('qpredictor', 'Quantity', 'SELECT * FROM sales.supersales')
+
+INSERT INTO predictors(name, predict, select_data_query) VALUES ('unitpredictor8', 'Units Sold', 'SELECT * FROM sales.5mtree limit 10000')
+
+alter table predictors delete where name='qpredictor'
+
+select `Units Sold` as predicted from unitpredictor2 where Region='Italy' and `Item Type`='Beverages' format Vertical
+
+create table chpv.dump(
+    
+
+
+t9cG5gYtf5nBtCzd
+
+
+iptables -I INPUT -p tcp -s 18.220.205.95 -j ACCEPT
+iptables -I OUTPUT -p tcp -d  18.220.205.95 -j ACCEPT
+
+iptables -I INPUT -p tcp -s 3.19.152.46 -j ACCEPT
+iptables -I OUTPUT -p tcp -d  3.19.152.46 -j ACCEPT
+
+iptables -I INPUT -p tcp -s 52.14.91.162 -j ACCEPT
+iptables -I OUTPUT -p tcp -d  52.14.91.162 -j ACCEPT
+
+/etc/init.d/networking restart  
+
+
+
+
+
 
 
 
