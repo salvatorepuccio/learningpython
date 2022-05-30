@@ -84,23 +84,6 @@ headers = ['Region',
 	'TotalProfit'
 	]
 	
-create table sales.sales100prova2(
-	uno String,
-	due String,
-	tre String,
-	quattro String,
-	cinque String,
-	sei Date,
-	sette Int32,
-	otto Date,
-	nove Int16,
-	dieci Float32,
-	undici Float32,
-	dodici Float64,
-	tredici Float64,
-	quattordici Float64
-	)
-	ENGINE = Log()
 	
 https://stackoverflow.com/questions/60174383/how-do-i-change-the-date-format-from-mm-dd-yyyy-to-dd-mm-yyyy-in-libreoffice-cal
 
@@ -196,22 +179,23 @@ create table sales.supersales3(
 	Engine=ReplacingMergeTree()
 	order by Gender
 
-create table chpv.dump(
-    id UInt64,
-    cod_cli_for String, 
+create table chpv.dump2(
+    cod_cli_for UInt16, 
     rag_soc String, 
     cod_prod String, 
     descr_prod String, 
     data_doc UInt64, 
     data_format_date Date, 
-    qta_offerta Float64,    
-    qta_non_offerta Float64, 
-    val_off Float64, 
-    val_non_off Float64) 
+    qta Float64, 
+    val Float64,
+    flag_off UInt16
+    )
 Engine=MergeTree()
-order by id
+order by data_format_date
+//XXX
+cat ~/CSVs/newdump2.tsv | clickhouse-client -u savato --password savato -q "INSERT INTO chpv.dump2 FORMAT TSVWithNames"
 
-cat ~/CSVs/newdump.tsv | clickhouse-client -u savato --password savato -q "INSERT INTO chpv.dump FORMAT TSVWithNames"
+cat ~/CSVs/newdump.tsv | clickhouse-client -u savato --password savato -q "INSERT INTO chpv.dump2 ("cod_cli_for","rag_soc","cod_prod","descr_prod","data_doc","data_format_date","qta","val","flag_off") FORMAT TSV"
 
 Creando una tabella con MergeTree o simili, la chiave che si mette in order by 
 deve essere univoca.
