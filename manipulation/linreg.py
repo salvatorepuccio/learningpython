@@ -1,12 +1,38 @@
+from re import I
+from turtle import clear
 from clickhouse_driver import Client
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import LinearRegression
 import matplotlib.dates as mdates
+import datetime
 
+def to_integer(dt_time):
+    return 10000*dt_time.year + 100*dt_time.month + dt_time.day
 
+def date_to_int(l):
+    l1 = []
+    for val in l:
+        ymd = str(val).split("-")
+        l1.append(int(ymd[0]+ymd[1]+ymd[2]))
+    return l1
 
+def my_to_numpy(mylist):
+    d = pd.DataFrame(mylist,columns=['col'])
+    return d['col'].to_numpy()
+
+def myplot(x,y):
+    fig, ax = plt.subplots()
+    ax = plt.gca()
+    formatter = mdates.DateFormatter("%Y-%m-%d")
+    ax.xaxis.set_major_formatter(formatter)
+    locator = mdates.WeekdayLocator(interval=4)
+    ax.xaxis.set_major_locator(locator)
+    plt.grid(True)
+    plt.gcf().autofmt_xdate()
+    ax.plot(x, y)
+    plt.show()
 
 client = Client(
                 host='127.0.0.1',
@@ -83,97 +109,152 @@ client.execute("use chpv")
 
 
 
-prodotto = 'WURSTEL'
-data_inizio = '2021-11-01'
-data_fine = '2022-01-31'
+# prodotto = 'WURSTEL'
+# data_inizio = '2021-11-01'
+# data_fine = '2022-01-31'
 
 
-sql = "Select data_format_date,sum(qta) from dump2 where data_format_date>'"+data_inizio+"' and data_format_date<'"+data_fine+"' and descr_prod like '%"+prodotto+"%' and flag_off=0 group by data_format_date limit 50000000"
-# sql = "Select data_doc,sum(qta) from dump2 where cod_prod = '145644015' and flag_off=0 group by data_doc"
-print(sql)
-query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
-
-cols = ['data','sum '+prodotto+' offerta']
-df = pd.DataFrame(query_result)
-df.columns = cols
-# print(df)
-
-
-print("Query result lines: "+str(len(df.index)))
-
-
-if len(df.index) > 0:
-
-    ax=df.plot(x=cols[0], y=cols[1],figsize=(20,20))
-    # ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
-    # plt.grid(True)
-    # plt.gcf().autofmt_xdate() 
-    plt.title("SOMMA VENDITE PRODOTTI CONTENGONO '"+prodotto+"' IN DESCRIZIONE\nDAL "+data_inizio+" A "+data_fine+" ",fontsize=24)
-    x = df[cols[0]].to_numpy()
-    y = df[cols[1]].to_numpy()
-    ax=plt.plot(x, y, 'o', color='black')
-    ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
-    plt.grid(True)
-    plt.gcf().autofmt_xdate() 
-    plt.show()
-
-
-
-
-
-# sql = "Select data_doc,sum(qta) from dump2 where cod_prod = '145644015' and flag_off=0 group by data_doc"
-# print(sql)#BAULI PANETTONE TRADIZION. KG1
+# sql = "Select data_format_date,sum(qta) from dump2 where data_format_date>'"+data_inizio+"' and data_format_date<'"+data_fine+"' and descr_prod like '%"+prodotto+"%' and flag_off=0 group by data_format_date limit 50000000"
+# # sql = "Select data_doc,sum(qta) from dump2 where cod_prod = '145644015' and flag_off=0 group by data_doc"
+# print(sql)
 # query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
 
-# cols = ['data_doc','sum '+prodotto+' offerta']
+# cols = ['data','sum '+prodotto+' offerta']
 # df = pd.DataFrame(query_result)
-# df.columns = cols;
+# df.columns = cols
+# # print(df)
 
-# ax=df.plot(x =cols[0], y=cols[1],figsize=(28,21))
+
+# print("Query result lines: "+str(len(df.index)))
+
+
+# if len(df.index) > 0:
+
+#     ax=df.plot(x=cols[0], y=cols[1],figsize=(20,20))
+#     # ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
+#     # plt.grid(True)
+#     # plt.gcf().autofmt_xdate() 
+#     plt.title("SOMMA VENDITE PRODOTTI CONTENGONO '"+prodotto+"' IN DESCRIZIONE\nDAL "+data_inizio+" A "+data_fine+" ",fontsize=24)
+#     x = df[cols[0]].to_numpy()
+#     y = df[cols[1]].to_numpy()
+#     ax=plt.plot(x, y, 'o', color='black')
+#     ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
+#     plt.grid(True)
+#     plt.gcf().autofmt_xdate() 
+#     plt.show()
+
+
+
+sql = "Select data_format_date,data_doc,sum(qta) from dump2 where cod_prod = '145644015' and flag_off=0 group by data_format_date,data_doc order by data_doc"
+# print(sql)#BAULI PANETTONE TRADIZION. KG1
+query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
+
+cols = ['data_format_date','data_doc','sum']
+df = pd.DataFrame(query_result)
+df.columns = cols
+
+# preparare il dataframe
+# devo inserire nelle date mancanti, un valore di vendita = 0
+data_format = df['data_format_date'].to_numpy()
+data_doc = df['data_doc'].to_numpy()
+sold = df['sum'].to_numpy()
+
+# filling data_format
+# data_format_full = np.arange(data_format[0], data_format[len(data_format)-1])
+data_format_full = np.arange(0, 364)
+# filling data_doc
+data_doc_full = date_to_int(data_format_full)
+
+# filling sold
+sold_full = []
+j = 0
+for curr_date in data_format_full:
+    if(curr_date == data_format[j]):
+        sold_full.append(sold[j])
+        j = j + 1
+    else:
+        sold_full.append(0)
+# myplot(data_format_full,sold_full)
+
+
+
+
+# converting to numpy arrays
+X = np.array(data_doc_full).reshape((-1,1))
+y = np.array(sold_full)
+# print(y)
+# myplot(data_format_full,y)
+
+#training model
+model = LinearRegression().fit(X,y)
+
+# print(type(datetime.date(2022,1,1)))
+# print(datetime.date(2022,1,1))
+
+data_format_pred = np.arange(datetime.date(2022,1,1),datetime.date(2022,12,31))
+data_doc_pred = date_to_int(data_format_pred)
+X_pred = np.array(data_doc_pred).reshape((-1,1))
+y_pred = model.predict(X)
+
+
+myplot(data_format_pred,y_pred)
+
+
+
+
+
+
+# start_date = data_format[0]
+# print(start_date)
+
+# number_of_days = 5
+
+# date_list = []
+# for day in range(number_of_days):
+#   a_date = (start_date + datetime.timedelta(days = day)).isoformat()
+#   date_list.append(a_date)
+
+# print(my_to_numpy(date_list))
+
+# print(data_format)
+
+# ax=df.plot(x=cols[0], y=cols[2],figsize=(28,21))
 # ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=4))
 # plt.grid(True)
 # plt.gcf().autofmt_xdate()
-# x = pd.to_datetime(df[cols[0]], format='%Y%m%d')
-# # print(x)
-# # df.set_index(cols[0])#data
-# # x = df[cols[0]].to_numpy().reshape((-1,1))#TRASFOMRA LE DATE IN INDICI, MA NON VA BENE
-# y = df[cols[1]].to_numpy()#somma venduto (da prevedere)
 
-# plt.plot(x, y, 'o', color='black');
-# # plt.show()
+# y = df[cols[2]].to_numpy() #somma venduto
+# x = df[cols[1]].to_numpy().reshape((-1,1)) #date numeriche
+# x_format = df[cols[0]].to_numpy()
 
-# # print(x)
-# # print(y)
-
-
-
-
-
-
+# plt.plot(x_format, y, 'o', color='black')
+# plt.show()
 
 
 # model = LinearRegression().fit(x,y)
+
 # r_sq = model.score(x, y)
 # print(f"coefficient of determination: {r_sq}")
-
 # print(f"intercept: {model.intercept_}")
-# intercept: 5.633333333333329
-
 # print(f"slope: {model.coef_}")
-    
-# new_model = LinearRegression().fit(x, y.reshape((-1, 1)))
-# print(f"intercept: {new_model.intercept_}")
-
-# print(f"slope: {new_model.coef_}")
 
 
+# xPred_format = pd.date_range(start="2022-01-01",end="2022-12-31")
 
 
+# xPred = []
+# for a in xPred_format:
+#     xPred.append(to_integer(a))
 
+# df2 = pd.DataFrame(xPred, columns=['data_doc'])
+# xPred_numpy = df2['data_doc'].to_numpy().reshape((-1,1))
+# xPred_format_numpy = df2['data_format_date'].to_numpy()
 
+# print(x)
+# print(xPred_numpy)
 
-# y_pred = model.predict(x_new)
-# data_arrays = np.array(x_new,y_pred)
-# df_pred = pd.DataFrame(data = data_arrays, columns = cols)
-# print(df_pred)
+# y_pred = model.predict(xPred_numpy)
 # print(f"predicted response:\n{y_pred}")
+
+# plt.plot(xPred_numpy, y_pred, 'o', color='black')
+# plt.show()
