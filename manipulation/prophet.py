@@ -56,8 +56,10 @@ client.execute("use chpv")
 # prod = "163854067 FINDUS 30 BASTONCINI MERL G750"
 # prod = "BAULI PANETTONE TRADIZION. KG1 145644015"
 # prod = "148520189 ULIVETO ACQUA EFFERV.LT.1.5"
-prod = "133207998     SCOTTEX CARTA IGIENICA X10"
-sql = "Select data_format_date,sum(qta) from dump2 where cod_prod = '133207998' and flag_off=0 group by data_format_date order by data_format_date"
+# prod = "133207998 SCOTTEX CARTA IGIENICA X10"
+# 080167020     ELMEX DENTIRICIO BIMBI ML.50
+# 080168306     MENTADENT DENT. D.I.C. ML.50
+sql = "Select data_format_date,sum(qta) from dump2 where cod_prod = '080167020' and flag_off=0 group by data_format_date order by data_format_date"
 query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
 
 # cols = ['cod_cli_for', 'rag_soc', 'data_format_date', 'flag_off', 'sum']
