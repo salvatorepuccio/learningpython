@@ -7,15 +7,17 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 import matplotlib.dates as mdates
 import datetime
+import math
 
 def to_integer(dt_time):
     return 10000*dt_time.year + 100*dt_time.month + dt_time.day
 
-def date_to_int(l):
+# prende una lista di date e restituisce una lista di indici che corrispondono
+# ai giorni dell'anno (1 gennaio = 1... l'anno non conta)
+def to_day_of_the_year(l):
     l1 = []
     for val in l:
-        ymd = str(val).split("-")
-        l1.append(int(ymd[0]+ymd[1]+ymd[2]))
+        l1.append(val.timetuple().tm_yday)
     return l1
 
 def my_to_numpy(mylist):
@@ -31,8 +33,49 @@ def myplot(x,y):
     ax.xaxis.set_major_locator(locator)
     plt.grid(True)
     plt.gcf().autofmt_xdate()
-    ax.plot(x, y)
+    ax.plot(x,y)
     plt.show()
+
+
+def myplot2(x,y,y1):
+    fig, ax = plt.subplots()
+    ax = plt.gca()
+    formatter = mdates.DateFormatter("%Y-%m-%d")
+    ax.xaxis.set_major_formatter(formatter)
+    locator = mdates.WeekdayLocator(interval=4)
+    ax.xaxis.set_major_locator(locator)
+    plt.grid(True)
+    plt.gcf().autofmt_xdate()
+    ax.plot(x,y)
+    ax.plot(x[-len(y1):],y1,color='red')
+    plt.show()
+
+# prende una data di inizio e una data di fine (stringhe) e restituisce una lista di tutti i giorni in mezzo
+def fill_dates(date_start,date_end):
+    # filling data_format
+    # data_format_full = np.arange(data_format[0], data_format[len(data_format)-1])
+    start = datetime.datetime.strptime(date_start, "%Y-%m-%d")
+    end = datetime.datetime.strptime(date_end, "%Y-%m-%d")
+    return pd.date_range(start, end)
+    
+# mette degli 0 nella date in cui non ci sono state vendite
+def fill_sells(full_calendar,mydays):
+    sells_full = []
+    j = 0
+    for curr_date in full_calendar:
+        # Se la data corrente e' una di quelle in cui ho fatto una vendita
+        if(str(curr_date).split(" ")[0] == str(mydays[j])):
+            # inserisci il venduto
+            sells_full.append(sold[j])
+            j = j + 1
+        else:
+            # altrimenti metti 0
+            sells_full.append(0)
+
+    return sells_full
+
+
+
 
 client = Client(
                 host='127.0.0.1',
@@ -41,70 +84,6 @@ client = Client(
                 database='chpv',
                 )
 client.execute("use chpv")
-
-
-# sql = "Select data_format_date,sum(qta) from dump2 where data_format_date between '2020-01-01' and '2020-01-31' and flag_off=0 group by data_format_date"
-# # cols = ['id','cod_cli_for', 'rag_soc', 'cod_prod', 'descr_prod', 'data_doc', 'data_format_date', 'qta_offerta', 'qta_non_offerta', 'val_off', 'val_non_off']
-# columns = ['data','somma_venduto_non_offerta']
-# query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
-# df = pd.DataFrame(query_result, columns = columns)
-
-# df.plot(x ='data', y='somma_venduto_non_offerta', kind = 'line')
-# plt.show()
-
-
-
-
-
-# sql = "Select data_format_date,sum(qta) from dump2 where cod_prod = '163850127' group by data_format_date"
-# # cols = ['id','cod_cli_for', 'rag_soc', 'cod_prod', 'descr_prod', 'data_doc', 'data_format_date', 'qta_offerta', 'qta_non_offerta', 'val_off', 'val_non_off']
-# columns = ['data','sum(venduto bastoncini)']
-# query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
-# df = pd.DataFrame(query_result, columns = columns)
-
-# df.plot(x ='data', y='sum(venduto bastoncini)',figsize=(21,14))
-# plt.show()
-
-
-
-
-# sql = "Select data_format_date,sum(qta) from dump2 where cod_prod = '163850127' and flag_off=1 group by data_format_date"
-# columns = ['data','sum(venduto bastoncini offerta)']
-# query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
-# df = pd.DataFrame(query_result, columns = columns)
-
-# df.plot(x ='data', y='sum(venduto bastoncini offerta)',figsize=(21,14))
-# plt.show()
-
-
-
-
-
-
-# sql = "Select data_format_date,sum(qta_non_offerta) from dump where cod_prod = '145644012' group by data_format_date"
-# # cols = ['id','cod_cli_for', 'rag_soc', 'cod_prod', 'descr_prod', 'data_doc', 'data_format_date', 'qta_offerta', 'qta_non_offerta', 'val_off', 'val_non_off']
-# prodotto = 'pandoro non'
-# columns = ['data','sum(venduto '+prodotto+' offerta)']
-# query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
-# df = pd.DataFrame(query_result, columns = columns)
-
-# df.plot(x ='data', y='sum(venduto '+prodotto+' offerta)',figsize=(21,14))
-# plt.show()
-
-
-
-
-
-# sql = "Select data_format_date,sum(qta) from dump2 where cod_prod = '145644012' and data_doc>20210101 and data_doc<20211231 and flag_off=1 group by data_format_date"
-# # cols = ['id','cod_cli_for', 'rag_soc', 'cod_prod', 'descr_prod', 'data_doc', 'data_format_date', 'qta_offerta', 'qta_non_offerta', 'val_off', 'val_non_off']
-# prodotto = 'pandoro'
-# columns = ['data','sum(venduto '+prodotto+' offerta)']
-# query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
-# df = pd.DataFrame(query_result, columns = columns)
-
-# df.plot(x ='data', y='sum(venduto '+prodotto+' offerta)',figsize=(21,14))
-# plt.show()
-
 
 
 
@@ -145,8 +124,8 @@ client.execute("use chpv")
 
 
 
-sql = "Select data_format_date,data_doc,sum(qta) from dump2 where cod_prod = '145644015' and flag_off=0 group by data_format_date,data_doc order by data_doc"
-# print(sql)#BAULI PANETTONE TRADIZION. KG1
+sql = "Select data_format_date,data_doc,sum(qta) from dump2 where cod_prod = '081220123' and flag_off=0 group by data_format_date,data_doc order by data_doc"
+# print(sql)#BAULI PANETTONE TRADIZION. KG1 145644015 
 query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
 
 cols = ['data_format_date','data_doc','sum']
@@ -159,102 +138,45 @@ data_format = df['data_format_date'].to_numpy()
 data_doc = df['data_doc'].to_numpy()
 sold = df['sum'].to_numpy()
 
-# filling data_format
-# data_format_full = np.arange(data_format[0], data_format[len(data_format)-1])
-data_format_full = np.arange(0, 364)
+# fill dates
+data_format_full = fill_dates(str(data_format[0]),str(data_format[len(data_format)-1]))
 # filling data_doc
-data_doc_full = date_to_int(data_format_full)
+data_index_full = to_day_of_the_year(data_format_full)
+# print(data_index_full)
 
-# filling sold
-sold_full = []
-j = 0
-for curr_date in data_format_full:
-    if(curr_date == data_format[j]):
-        sold_full.append(sold[j])
-        j = j + 1
-    else:
-        sold_full.append(0)
-# myplot(data_format_full,sold_full)
+# fill sells
+sells_full = fill_sells(data_format_full,data_format)
+
+# myplot(data_format_full,sells_full)
 
 
 
-
-# converting to numpy arrays
-X = np.array(data_doc_full).reshape((-1,1))
-y = np.array(sold_full)
-# print(y)
+# # converting to numpy arrays
+# X = np.array(data_index_full).reshape((-1,1))
+# # print(len(data_index_full))
+# y = np.array(sells_full)
+# # print(len(y))
 # myplot(data_format_full,y)
 
-#training model
-model = LinearRegression().fit(X,y)
+# #training model
+# model = LinearRegression().fit(X,y)
 
-# print(type(datetime.date(2022,1,1)))
-# print(datetime.date(2022,1,1))
+# # print(type(datetime.date(2022,1,1)))
+# # print(datetime.date(2022,1,1))
 
-data_format_pred = np.arange(datetime.date(2022,1,1),datetime.date(2022,12,31))
-data_doc_pred = date_to_int(data_format_pred)
-X_pred = np.array(data_doc_pred).reshape((-1,1))
-y_pred = model.predict(X)
+# data_format_pred = fill_dates("2022-01-01","2022-01-31")
+# print(len(data_format_pred))
+# data_index_pred = to_day_of_the_year(data_format_pred)
+# print(len(data_index_pred))
+# X_pred = np.array(data_index_pred).reshape((-1,1))
+# print(len(X_pred))
+# y_pred = model.predict(X_pred)
 
+# #clean y_pred
+# clean_y_pred =  np.array( [ math.floor(num) for num in y_pred ] )
 
-myplot(data_format_pred,y_pred)
+# print(len(clean_y_pred))
+# print(clean_y_pred)
 
-
-
-
-
-
-# start_date = data_format[0]
-# print(start_date)
-
-# number_of_days = 5
-
-# date_list = []
-# for day in range(number_of_days):
-#   a_date = (start_date + datetime.timedelta(days = day)).isoformat()
-#   date_list.append(a_date)
-
-# print(my_to_numpy(date_list))
-
-# print(data_format)
-
-# ax=df.plot(x=cols[0], y=cols[2],figsize=(28,21))
-# ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=4))
-# plt.grid(True)
-# plt.gcf().autofmt_xdate()
-
-# y = df[cols[2]].to_numpy() #somma venduto
-# x = df[cols[1]].to_numpy().reshape((-1,1)) #date numeriche
-# x_format = df[cols[0]].to_numpy()
-
-# plt.plot(x_format, y, 'o', color='black')
-# plt.show()
-
-
-# model = LinearRegression().fit(x,y)
-
-# r_sq = model.score(x, y)
-# print(f"coefficient of determination: {r_sq}")
-# print(f"intercept: {model.intercept_}")
-# print(f"slope: {model.coef_}")
-
-
-# xPred_format = pd.date_range(start="2022-01-01",end="2022-12-31")
-
-
-# xPred = []
-# for a in xPred_format:
-#     xPred.append(to_integer(a))
-
-# df2 = pd.DataFrame(xPred, columns=['data_doc'])
-# xPred_numpy = df2['data_doc'].to_numpy().reshape((-1,1))
-# xPred_format_numpy = df2['data_format_date'].to_numpy()
-
-# print(x)
-# print(xPred_numpy)
-
-# y_pred = model.predict(xPred_numpy)
-# print(f"predicted response:\n{y_pred}")
-
-# plt.plot(xPred_numpy, y_pred, 'o', color='black')
-# plt.show()
+# myplot(data_format_pred,y_pred)
+# # myplot2(data_format_full,y,y_pred)
