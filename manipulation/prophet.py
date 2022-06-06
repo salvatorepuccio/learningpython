@@ -26,7 +26,7 @@ def to_day_of_the_year(l):
 
 
 # mette degli 0 nella date in cui non ci sono state vendite
-def fill_sells(full_calendar,mydays):
+def fill_sells(full_calendar,mydays,sold):
     sells_full = []
     j = 0
     for curr_date in full_calendar:
@@ -113,7 +113,7 @@ data_format_full = fill_dates(str(data_format[0]),str(data_format[len(data_forma
 # data_index_full = to_day_of_the_year(data_format_full)
 
 # fill sells
-sells_full = fill_sells(data_format_full,data_format)
+sells_full = fill_sells(data_format_full,data_format,sold)
 
 # myplot(data_format_full,sells_full)
 
