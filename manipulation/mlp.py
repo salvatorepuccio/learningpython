@@ -9,6 +9,8 @@ from sklearn.model_selection import train_test_split
 import matplotlib.dates as mdates
 from datetime import datetime
 import math
+import warnings
+warnings.filterwarnings("ignore")
 
 # prende una data di inizio e una data di fine (stringhe) e restituisce una lista di tutti i giorni in mezzo
 def fill_dates(date_start,date_end):
@@ -27,48 +29,91 @@ def to_day_of_the_year(l):
     return l1
 
 # mette degli 0 nella date in cui non ci sono state vendite
-def fill_dataframe(full_calendar,mydays,datafr,ragione_sociale,colonne_df):
+def fill_dataframe(df,colonne_df):
+    full_calendar = fill_dates(str(df['data_format_date'][0]),str(df['data_format_date'][len(df)-1]))
     j = 0
+    N_date_mancanti = 0
     for curr_date in full_calendar:
-        # print(str(curr_date).split(" ")[0]+"   "+ str(mydays[j])+" j: "+str(j))
         # Se la data corrente e' una di quelle in cui ho fatto una vendita
-        if(str(curr_date).split(" ")[0] == str(mydays[j])):
-            # inserisci il venduto
+        if(str(curr_date).split(" ")[0] == str(df['data_format_date'][j])):
+            # print("Presente "+str(curr_date))
+            # non fare nulla
             j = j + 1
         else:
-            # altrimenti metti 0
-            new_row = [ragione_sociale,curr_date,0,0,0]
+            # altrimenti metti una "vendita" 0
+            N_date_mancanti += 1
+            # print("Manca "+str(curr_date))
+            new_row = [curr_date,0,0,0]
             dff = pd.DataFrame([new_row],columns=colonne_df)
-            datafr = pd.concat([datafr,dff])
-            # datafr = datafr.append(new_row,ignore_index=True)
+            df = pd.concat([df,dff])
     
-    datafr["data_format_date"] = pd.to_datetime(datafr["data_format_date"])
-    datafr = datafr.sort_values(by="data_format_date")
+    df["data_format_date"] = pd.to_datetime(df["data_format_date"])
+    df = df.sort_values(by="data_format_date")
+    print("Mancavano "+str(N_date_mancanti)+" date")
+    df = df.reset_index(drop=True)
+    return df
 
-    return datafr
+def somma_duplicate(df):
+    data_prec = "NULL"
+    i = 0
+    eliminate = 0
+    end = len(df)
+    for i in range(0,end):
+        if(str(df['data_format_date'][i]) == data_prec):
+            eliminate+=1
+            df['qta'][i] += df['qta'][i-1]
+            df['val'][i] += df['val'][i-1]
+            df = df.drop(i-1)
+            end -= 1
 
-def convert_rag_soc(datafr):
-    converted_values = []
-    for elem in datafr['rag_soc']:
-        print("current elem:")
-        print(elem)
-        category = elem.split(" ")[0]
-        number = elem.split(" ")[1]
-        print("category:")
-        print(category)
-        print("number:")
-        print(number)
-        if(category == "SUPERSTORE"):
-            converted_values.append(float(str(1)+str(number)))
-        if(category == "SUPERMARKET"):
-            converted_values.append(float(str(2)+str(number)))
-        if(category == "IPERSTORE"):
-            converted_values.append(float(str(3)+str(number)))
-    datafr.drop(axis=1,columns='rag_soc')
-    datafr['rag_soc'] = converted_values
+        data_prec = str(df['data_format_date'][i])
+    print("Eliminate "+str(eliminate)+" duplicazioni")
+    df = df.reset_index(drop=True)
+    return df
+        
+
+def myplot2(x,y,y1):
+    fig, ax = plt.subplots()
+    ax = plt.gca()
+    formatter = mdates.DateFormatter("%Y-%m-%d")
+    ax.xaxis.set_major_formatter(formatter)
+    locator = mdates.WeekdayLocator(interval=4)
+    ax.xaxis.set_major_locator(locator)
+    plt.grid(True)
+    plt.gcf().autofmt_xdate()
+    ax.plot(x,y,linewidth=1.5)
+    ax.plot(x[-len(y1):],y1,color='red',linewidth=0.5)
+    plt.show()
+
+def myplot(x,y):
+    fig, ax = plt.subplots()
+    ax = plt.gca()
+    formatter = mdates.DateFormatter("%Y-%m-%d")
+    ax.xaxis.set_major_formatter(formatter)
+    locator = mdates.WeekdayLocator(interval=4)
+    ax.xaxis.set_major_locator(locator)
+    plt.grid(True)
+    plt.gcf().autofmt_xdate()
+    ax.plot(x,y)
+    plt.show()
+
+def print_all(df):
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        print(df)
+
+def get_days(df_col):
+    ret = []
+    for x in df_col:
+        ret.append(x.weekday())
+    return ret
+
+def get_week(df_col):
+    ret = []
+    for x in df_col:
+        ret.append(x.isocalendar()[1])
+    return ret
+
     
-
-
 
 client = Client(
                 host='127.0.0.1',
@@ -78,50 +123,123 @@ client = Client(
                 )
 client.execute("use chpv")
 
-sql = "Select rag_soc,data_format_date,qta,val,flag_off from dump2 where cod_prod='163854067' order by data_format_date"
+# | 000249036     PARMAREG.L'ABC MERENDA IVA 10% │
+# │ 000249037     PARMAREG.L'ABC MERENDA IVA 22% │
+# │ 005068383     CALZ.TREND SPORT BICOLORE 2NNN │
+# │ 005158930     GAMB.MICRO 50 DEN G.LADY 110K  │
+# │ 005195001     GAMB.STRETCH 15 DEN G.LADY x 2 │
+# │ 005195029     COLLANT BODY FORM GOLDEN LADY  │
+# │ 005233311     GAMB.TREND MICRO 30 D          │
+# │ 005300679     COLLANT LEDA FILANCA G.LADY x2 │
+# │ 005544076     COLLANT MY BEAUTY 50           │
+# │ 005809311     COLLANT SILHOUETTE 30          │
+# │ 005818542     COLLANT BENESS.COMPR.MEDIA 70D │
+# │ 066216584     OMB.MINI UOMO U/LIG.AUT.TEC.   │
+# │ 080112701     PRORASO CREMA PREB.ML.100 VASO │
+# │ 080112702     PRORASO CIOTOLA BARBA ML.150   │
+# │ 080112703     PRORASO SCH.BARBA RINFR.ML400# │
+# │ 080112707     PRORASO SCH.BARBA PROTET.400ML │
+# │ 080112709     PRORASO SCH-BARBA P.SENS.ML300 │
+# │ 080119200     MASCARA THE ROCKET VERY BLACK  │
+# │ 080123754     FIGARO SCH.BARBA SENSITIVE 400 │
+# │ 080124800     I PROVENZALI SAP.LIQ MAND.DOL  |
+# | 163854067     FINDUS 30 BASTONCINI MERL G750 |
+# 148520655     VITASNELLA ACQUA CL.50
+# 148520098     S.BENEDETTO ACQUA LT.2
+# 148520189     ULIVETO ACQUA EFFERV.LT.1.5
+
+# ┌─rag_soc────────┐
+# │ SUPERSTORE 01  │
+# │ SUPERSTORE 02  │
+# │ SUPERMARKET 01 │
+# │ SUPERSTORE 05  │
+# │ IPERSTORE 01   │
+# │ IPERSTORE 02   │
+# │ SUPERSTORE 06  │
+# │ SUPERMARKET 02 │
+# │ SUPERSTORE 03  │
+# │ SUPERMARKET 03 │
+# │ SUPERMARKET 04 │
+# │ SUPERMARKET 05 │
+# │ SUPERMARKET 06 │
+# │ SUPERSTORE 04  │
+# │ SUPERSTORE 07  │
+# │ IPERSTORE 03   │
+# │ IPERSTORE 04   │
+# │ SUPERMARKET 07 │
+# │ SUPERSTORE 08  │
+# └────────────────┘
+# ┌─rag_soc────────┐
+# │ SUPERMARKET 08 │
+# │ SUPERMARKET 09 │
+# │ SUPERMARKET 10 │
+# │ SUPERSTORE 09  │
+# │ SUPERSTORE 10  │
+# │ SUPERMARKET 11 │
+# │ SUPERMARKET 12 │
+# │ SUPERSTORE 11  │
+# │ SUPERMARKET 13 │
+# │ SUPERSTORE 12  │
+# │ SUPERSTORE 13  │
+# └────────────────┘
+# ┌─rag_soc────────┐
+# │ SUPERSTORE 14  │
+# │ SUPERMARKET 14 │
+# │ SUPERSTORE 15  │
+# └────────────────┘
+
+sql = "Select data_format_date,qta,val,flag_off from dump2 where cod_prod='080112703' and rag_soc = 'IPERSTORE 03' group by data_format_date,val,flag_off,qta order by data_format_date"
 query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
 
-cols = ['rag_soc','data_format_date','qta','val','flag_off']
+cols = ['data_format_date','qta','val','flag_off']
 df = pd.DataFrame(query_result)
 df.columns = cols
 
-date_query = df['data_format_date'].to_numpy()
-# print(date_query)
+# Somma le righe duplicate, ovvero con la stessa data
+df = somma_duplicate(df)
 
-date_complete = fill_dates(str(date_query[0]),str(date_query[len(date_query)-1]))
-# print(date_complete)
+# Aggiunge una riga per ogni data mancante all'interno del range della query, con qta = 0
+df = fill_dataframe(df,cols)
+# print_all(df)
 
-df2 = fill_dataframe(date_complete,date_query,df,'SUPERSTORE 01',cols)
+# Plot delle vendite (0 compresi) nel periodo della query
+# myplot(df['data_format_date'],df['qta'])
 
-convert_rag_soc(df2)
+# Estrapolazione dalle date di num settimana e giorno della settimana
+days = get_days(df['data_format_date'])# num [0,6] lun,mar,mer....dom
+weeks = get_week(df['data_format_date'])
+# Inserimento nuove colonne
+df.insert(0, 'days', days, True)
+df.insert(0, 'weeks', weeks, True)
 
-with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-    print(df2)
+y = df['qta'].to_numpy()
+X = df[['weeks','days','flag_off']].to_numpy()
 
-# print(type(df2['data_format_date'][0]))
-# print(type(df2['data_format_date'][660]))
-# date_indici = to_day_of_the_year(date_complete)
-
-# prezzi = df['val'].to_numpy()
-
-# flag_offerta = df['flag_off'].to_numpy()
-
-# qta_venduto = df['qta'].to_numpy()
-
-# y = df2['qta'].to_numpy()
-
-# df2 = df2.drop(axis=1,columns='qta')
-# X = df2.to_numpy()
-
-
-
-
-
-
-
-# # X, y = make_regression(n_samples=200, random_state=1)
+# Setto le dimensioni di train e test (80,20)
+train_size = math.floor(len(X) / 100 * 80)
+test_size = len(X) - train_size
 # X_train, X_test, y_train, y_test = train_test_split(X, y,random_state=1)
-# regr = MLPRegressor(random_state=1, max_iter=500).fit(X_train, y_train)
-# regr.predict(X_test[:2])
-# regr.score(X_test, y_test)
+print("Total "+str(len(X))+" train size "+str(train_size)+" test size "+str(test_size))
 
+# Divido i dati in train e test
+X_train = X[:train_size]
+X_test = X[train_size:len(X)]
+
+y_train = y[:train_size]
+y_test = y[train_size:len(y)]
+
+# Alleno il modello
+regr = MLPRegressor(random_state=1, max_iter=5000).fit(X_train, y_train)
+
+# Predico su X_test
+y_pred = regr.predict(X_test)
+
+# Stampo l'accuracy
+print(regr.score(X_test, y_test))
+
+# Tronco i valori predetti
+y_pred = np.trunc(y_pred)
+print(y_test)
+print(y_pred)
+
+myplot2(df['data_format_date'],y,y_pred)
