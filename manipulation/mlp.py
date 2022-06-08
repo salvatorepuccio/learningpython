@@ -22,7 +22,7 @@ def fill_dates(date_start,date_end):
     return ret
 
 
-def to_day_of_the_year(l):
+def get_day_of_the_year(l):
     l1 = []
     for val in l:
         l1.append(val.timetuple().tm_yday)
@@ -81,8 +81,8 @@ def myplot2(x,y,y1):
     ax.xaxis.set_major_locator(locator)
     plt.grid(True)
     plt.gcf().autofmt_xdate()
-    ax.plot(x,y,linewidth=1.5)
-    ax.plot(x[-len(y1):],y1,color='red',linewidth=0.5)
+    ax.plot(x,y,linewidth=1)
+    ax.plot(x[-len(y1):],y1,color='red',linewidth=1)
     plt.show()
 
 def myplot(x,y):
@@ -111,6 +111,18 @@ def get_week(df_col):
     ret = []
     for x in df_col:
         ret.append(x.isocalendar()[1])
+    return ret
+
+def get_unit_price(df_qta_val):
+    ret = []
+    append_me=0
+    for i in range(0,len(df_qta_val)):
+        if(df_qta_val['val'][i]==0):
+            append_me = 0
+        else:
+            append_me = df_qta_val['val'][i] / df_qta_val['qta'][i]
+        ret.append(append_me)
+        # print("qta "+str(df_qta_val['qta'][i])+" val "+str(df_qta_val['val'][i])+" prezzo unitario "+str(append_me))
     return ret
 
     
@@ -188,7 +200,7 @@ client.execute("use chpv")
 # │ SUPERSTORE 15  │
 # └────────────────┘
 
-sql = "Select data_format_date,qta,val,flag_off from dump2 where cod_prod='080112703' and rag_soc = 'IPERSTORE 03' group by data_format_date,val,flag_off,qta order by data_format_date"
+sql = "Select data_format_date,qta,val,flag_off from dump2 where cod_prod='148520189' and rag_soc = 'IPERSTORE 03' group by data_format_date,val,flag_off,qta order by data_format_date"
 query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
 
 cols = ['data_format_date','qta','val','flag_off']
@@ -200,33 +212,42 @@ df = somma_duplicate(df)
 
 # Aggiunge una riga per ogni data mancante all'interno del range della query, con qta = 0
 df = fill_dataframe(df,cols)
-# print_all(df)
+print(len(df))
 
 # Plot delle vendite (0 compresi) nel periodo della query
 # myplot(df['data_format_date'],df['qta'])
 
 # Estrapolazione dalle date di num settimana e giorno della settimana
-days = get_days(df['data_format_date'])# num [0,6] lun,mar,mer....dom
-weeks = get_week(df['data_format_date'])
+day_of_week = get_days(df['data_format_date'])# num [0,6] lun,mar,mer....dom
+print(len(day_of_week))
+week_n = get_week(df['data_format_date'])
+unit_price = get_unit_price(df[['qta','val']])
+day_of_year = get_day_of_the_year(df['data_format_date'])
+
 # Inserimento nuove colonne
-df.insert(0, 'days', days, True)
-df.insert(0, 'weeks', weeks, True)
+df.insert(0, 'day_of_week', day_of_week, True)
+df.insert(0, 'week_n', week_n, True)
+df.insert(0,'unit_price', unit_price, True)
+df.insert(0,'day_of_year', day_of_year, True)
+
+# print_all(df)
 
 y = df['qta'].to_numpy()
-X = df[['weeks','days','flag_off']].to_numpy()
+X = df[['day_of_year','unit_price','week_n','day_of_week','flag_off']].to_numpy()
 
 # Setto le dimensioni di train e test (80,20)
-train_size = math.floor(len(X) / 100 * 80)
-test_size = len(X) - train_size
+total_size = len(X)
+train_size = math.floor(total_size / 100 * 80)
+test_size = total_size - train_size
 # X_train, X_test, y_train, y_test = train_test_split(X, y,random_state=1)
 print("Total "+str(len(X))+" train size "+str(train_size)+" test size "+str(test_size))
 
 # Divido i dati in train e test
 X_train = X[:train_size]
-X_test = X[train_size:len(X)]
+X_test = X[train_size:total_size]
 
 y_train = y[:train_size]
-y_test = y[train_size:len(y)]
+y_test = y[train_size:total_size]
 
 # Alleno il modello
 regr = MLPRegressor(random_state=1, max_iter=5000).fit(X_train, y_train)
@@ -239,7 +260,8 @@ print(regr.score(X_test, y_test))
 
 # Tronco i valori predetti
 y_pred = np.trunc(y_pred)
-print(y_test)
-print(y_pred)
+# print(y_test)
+# print(y_pred)
 
+# Mostro i risultati
 myplot2(df['data_format_date'],y,y_pred)
