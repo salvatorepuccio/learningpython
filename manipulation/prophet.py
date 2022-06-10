@@ -59,7 +59,7 @@ client.execute("use chpv")
 # prod = "133207998 SCOTTEX CARTA IGIENICA X10"
 # 080167020     ELMEX DENTIRICIO BIMBI ML.50
 # 080168306     MENTADENT DENT. D.I.C. ML.50
-sql = "Select data_format_date,sum(qta) from dump2 where cod_prod = '080167020' and flag_off=0 group by data_format_date order by data_format_date"
+sql = "Select data_format_date,sum(qta) from dump2 where cod_prod='155205436' and rag_soc = 'IPERSTORE 01' and flag_off=0 group by data_format_date order by data_format_date"
 query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
 
 # cols = ['cod_cli_for', 'rag_soc', 'data_format_date', 'flag_off', 'sum']
@@ -127,6 +127,6 @@ forecast = m.predict(future)
 # # forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail()
 fig1 = m.plot(forecast)
 plt.show()
-fig2 = m.plot_components(forecast)
-plt.show()
+# fig2 = m.plot_components(forecast)
+# plt.show()
 # plot_plotly(m, forecast).show()
