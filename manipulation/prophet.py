@@ -7,6 +7,7 @@ from sklearn.linear_model import LinearRegression
 import matplotlib.dates as mdates
 import datetime
 import math
+import time
 from fbprophet import Prophet
 from fbprophet.plot import plot_plotly, plot_components_plotly
 
@@ -59,74 +60,64 @@ client.execute("use chpv")
 # prod = "133207998 SCOTTEX CARTA IGIENICA X10"
 # 080167020     ELMEX DENTIRICIO BIMBI ML.50
 # 080168306     MENTADENT DENT. D.I.C. ML.50
-sql = "Select data_format_date,sum(qta) from dump2 where cod_prod='155205436' and rag_soc = 'IPERSTORE 01' and flag_off=0 group by data_format_date order by data_format_date"
-query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
-
-# cols = ['cod_cli_for', 'rag_soc', 'data_format_date', 'flag_off', 'sum']
-# df = pd.DataFrame(query_result)
-
-# df.columns = cols
-# df = df[["data_format_date","sum"]]
-# df = df.rename(columns = {"data_format_date":"ds","sum":"y"})
-# # df['ds'] = fill_dates(df['ds'][0],df['ds'][len(df)-1])
-# ds = pd.date_range(df['ds'][0], df['ds'][len(df)-1])
-
-# m = Prophet(yearly_seasonality = True) # the Prophet class (model)
-# m.fit(df) # fit the model using all data
-
-
-# future = m.make_future_dataframe(periods=365) #we need to specify the number of days in future
-# forecast = m.predict(future)
-# # forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail()
-# fig1 = m.plot(forecast)
-# plt.show()
-# fig2 = m.plot_components(forecast)
-# plot_plotly(m, forecast).show()
-
-# plot_components_plotly(m, forecast)
-
-
-# m.plot(forecast)
-# plot_components_plotly(m, forecast)
-# plt.title("forecast of "+prod+" sells using the Prophet")
-# plt.xlabel("Date")
-# plt.ylabel("Close Stock Price")
-# plt.show()
 
 
 
 
 
 
-cols = ['data_format_date','sum']
-df = pd.DataFrame(query_result)
-df.columns = cols
-# devo inserire nelle date mancanti, un valore di vendita = 0
-data_format = df['data_format_date'].to_numpy()
-# print(data_format)
-# data_doc = df['data_doc'].to_numpy()
-sold = df['sum'].to_numpy()
 
-# fill dates
-data_format_full = fill_dates(str(data_format[0]),str(data_format[len(data_format)-1]))
-# filling data_doc
-# data_index_full = to_day_of_the_year(data_format_full)
+iperstores = ['IPERSTORE 01','IPERSTORE 02', 'IPERSTORE 03', 'IPERSTORE 04']
+superstores = ['SUPERSTORE 01','SUPERSTORE 02','SUPERSTORE 03','SUPERSTORE 04','SUPERSTORE 05','SUPERSTORE 06','SUPERSTORE 07','SUPERSTORE 08','SUPERSTORE 09','SUPERSTORE 10','SUPERSTORE 11','SUPERSTORE 12','SUPERSTORE 13','SUPERSTORE 14','SUPERSTORE 15']
+supermarkets = ['SUPERMARKET 01','SUPERMARKET 02','SUPERMARKET 03','SUPERMARKET 04','SUPERMARKET 05','SUPERMARKET 06','SUPERMARKET 07','SUPERMARKET 08','SUPERMARKET 09','SUPERMARKET 10','SUPERMARKET 11','SUPERMARKET 12','SUPERMARKET 13','SUPERMARKET 14']
+categories = [iperstores,superstores,supermarkets]
+prodotto = "AMADORI BASTONCINI POLLO G.280"
+t = time.time()
+for category in categories:
 
-# fill sells
-sells_full = fill_sells(data_format_full,data_format,sold)
+    scores = []
+    n_stores = 0
+    for current_store in category:
+        
+        sql = "Select data_format_date,sum(qta) from dump2 where rag_soc = '"+current_store+"' and flag_off=0 group by data_format_date order by data_format_date"
+        query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
+        
+        if(len(query_result)>0):
 
-# myplot(data_format_full,sells_full)
+            cols = ['data_format_date','sum']
+            df = pd.DataFrame(query_result)
+            df.columns = cols
+            # devo inserire nelle date mancanti, un valore di vendita = 0
+            data_format = df['data_format_date'].to_numpy()
+            # print(data_format)
+            # data_doc = df['data_doc'].to_numpy()
+            sold = df['sum'].to_numpy()
 
-data = pd.DataFrame(list(zip(data_format_full, sells_full)),columns=["ds","y"])
+            # fill dates
+            data_format_full = fill_dates(str(data_format[0]),str(data_format[len(data_format)-1]))
+            # filling data_doc
+            # data_index_full = to_day_of_the_year(data_format_full)
 
-m = Prophet(yearly_seasonality = True) # the Prophet class (model)
-m.fit(data) # fit the model using all data
+            # fill sells
+            sells_full = fill_sells(data_format_full,data_format,sold)
 
-future = m.make_future_dataframe(periods=365) #we need to specify the number of days in future
-forecast = m.predict(future)
-# # forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail()
-fig1 = m.plot(forecast)
-plt.show()
-# fig2 = m.plot_components(forecast)
-# plt.show()
-# plot_plotly(m, forecast).show()
+            # myplot(data_format_full,sells_full)
+
+            data = pd.DataFrame(list(zip(data_format_full, sells_full)),columns=["ds","y"])
+
+            m = Prophet(yearly_seasonality = True) # the Prophet class (model)
+            m.fit(data) # fit the model using all data
+
+            future = m.make_future_dataframe(periods=365) #we need to specify the number of days in future
+            forecast = m.predict(future)
+            # # forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail()
+            fig1 = m.plot(forecast)
+            plt.show()
+            # fig2 = m.plot_components(forecast)
+            # plt.show()
+            # plot_plotly(m, forecast).show()
+            
+        else:
+            print("\n"+current_store+" non vende "+prodotto+"\n") 
+print("Media score: "+str(sum(scores) / n_stores))
+print("Tempo %.2f s\n" % (time.time() - t))

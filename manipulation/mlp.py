@@ -3,6 +3,7 @@ from logging.handlers import DEFAULT_UDP_LOGGING_PORT
 from turtle import clear
 from attr import attributes
 from clickhouse_driver import Client
+import cupshelpers
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -178,45 +179,40 @@ client.execute("use chpv")
 
 #  ______________________________________________
 # | 000249036     PARMAREG.L'ABC MERENDA IVA 10% │
-# │ 000249037     PARMAREG.L'ABC MERENDA IVA 22% │
-# │ 005068383     CALZ.TREND SPORT BICOLORE 2NNN │
-# │ 005158930     GAMB.MICRO 50 DEN G.LADY 110K  │
-# │ 005195001     GAMB.STRETCH 15 DEN G.LADY x 2 │
-# │ 005195029     COLLANT BODY FORM GOLDEN LADY  │
-# │ 005233311     GAMB.TREND MICRO 30 D          │
-# │ 005300679     COLLANT LEDA FILANCA G.LADY x2 │
-# │ 005544076     COLLANT MY BEAUTY 50           │
-# │ 005809311     COLLANT SILHOUETTE 30          │
-# │ 005818542     COLLANT BENESS.COMPR.MEDIA 70D │
-# │ 066216584     OMB.MINI UOMO U/LIG.AUT.TEC.   │
-# │ 080112701     PRORASO CREMA PREB.ML.100 VASO │
-# │ 080112702     PRORASO CIOTOLA BARBA ML.150   │
-# │ 080112703     PRORASO SCH.BARBA RINFR.ML400# │
-# │ 080112707     PRORASO SCH.BARBA PROTET.400ML │
-# │ 080112709     PRORASO SCH-BARBA P.SENS.ML300 │
+# │ 000249037     PARMAREG.L'ABC MERENDA IVA 22% ││
+# │ 080112709     PRORASO SCH-BARBA P.SENS.ML300    [OK] │
 # │ 080119200     MASCARA THE ROCKET VERY BLACK  │
 # │ 080123754     FIGARO SCH.BARBA SENSITIVE 400 │
 # │ 080124800     I PROVENZALI SAP.LIQ MAND.DOL  |
 # | 163854067     FINDUS 30 BASTONCINI MERL G750 |
 # | 148520655     VITASNELLA ACQUA CL.50         |
 # | 148520098     S.BENEDETTO ACQUA LT.2         |
-# | 148520189     ULIVETO ACQUA EFFERV.LT.1.5    |
-# | 155205436     BARILLA PENNE RIG.5 CER.GR.400 |
+# | 148520189     ULIVETO ACQUA EFFERV.LT.1.5   [OK] |
+# | 155205436     BARILLA PENNE RIG.5 CER.GR.400    [OK]
+# 163858005     AMADORI BASTONCINI POLLO G.280 
+# 145645009     PALUANI PANDORO CR.CIOC.GR.750
+# 145644117     MAINA PANDORO CONF.MOMENTI MAG │
+#│ 145644127     MAINA PANDORO CIOCCOLOTT.GR750
+# 125621076     DIESSE PIATTI FONDI GR.700|
+#140310420     KINDER CARDS LATTE/CAC. GR.128
+#148500405     PERONI BIRRA CL.33X3
 #  ----------------------------------------------
 
 iperstores = ['IPERSTORE 01','IPERSTORE 02', 'IPERSTORE 03', 'IPERSTORE 04']
 superstores = ['SUPERSTORE 01','SUPERSTORE 02','SUPERSTORE 03','SUPERSTORE 04','SUPERSTORE 05','SUPERSTORE 06','SUPERSTORE 07','SUPERSTORE 08','SUPERSTORE 09','SUPERSTORE 10','SUPERSTORE 11','SUPERSTORE 12','SUPERSTORE 13','SUPERSTORE 14','SUPERSTORE 15']
 supermarkets = ['SUPERMARKET 01','SUPERMARKET 02','SUPERMARKET 03','SUPERMARKET 04','SUPERMARKET 05','SUPERMARKET 06','SUPERMARKET 07','SUPERMARKET 08','SUPERMARKET 09','SUPERMARKET 10','SUPERMARKET 11','SUPERMARKET 12','SUPERMARKET 13','SUPERMARKET 14']
 categories = [iperstores,superstores,supermarkets]
-prodotto = "BARILLA PENNE RIG.5 CER.GR.400"
+prodotto = "PERONI BIRRA CL.33X3"
 t = time.time()
 for category in categories:
 
     scores = []
     n_stores = 0
     for current_store in category:
+        print("")
+        print(current_store)
         
-        sql = "Select data_format_date,qta,val,flag_off from dump2 where cod_prod='155205436' and rag_soc = '"+current_store+"' group by data_format_date,val,flag_off,qta order by data_format_date"
+        sql = "Select data_format_date,qta,val,flag_off from dump2 where cod_prod='148500405' and rag_soc = '"+current_store+"' group by data_format_date,val,flag_off,qta order by data_format_date"
         query_result = client.execute(sql, settings = {'max_execution_time' : 3600})
         
         if(len(query_result)>0):
@@ -228,9 +224,11 @@ for category in categories:
 
             # Somma le righe duplicate, ovvero con la stessa data
             df = somma_duplicate(df)
+            righe_non_nulle = len(df)
             
             # Aggiunge una riga per ogni data mancante all'interno del range della query, con qta = 0
             df = fill_dataframe(df,cols)
+            righe_totali = len(df)
 
             # Plot delle vendite (0 compresi) nel periodo della query
             # myplot(df['data_format_date'],df['qta'])
@@ -244,54 +242,211 @@ for category in categories:
             # flag_off_bool = convert_flag_to_bool(df['flag_off'])# flag offerta True, False invece di 1,0
 
             # Inserimento nuove colonne
-            df.insert(0, 'day_of_week', day_of_week, True)
-            df.insert(0, 'week_n', week_n, True)
-            df.insert(0,'day_of_year', day_of_year, True)
             df.insert(0, 'day_of_month', day_of_month, True)
+            df.insert(0, 'day_of_week', day_of_week, True)
+            df.insert(0,'day_of_year', day_of_year, True)
+            df.insert(0, 'week_n', week_n, True)
             df.insert(0,'unit_price', unit_price, True)
             # df.insert(0, 'flag_off_bool', flag_off_bool, True)
 
             y = df['qta'].to_numpy()
-            X = df[['day_of_month','day_of_year','week_n','unit_price','day_of_week','flag_off']].to_numpy()
+            X = df[['day_of_month','day_of_week','day_of_year','week_n','unit_price','flag_off']].to_numpy()
+            # X = df[['day_of_year','unit_price','flag_off']].to_numpy()
+        
+            X_train, X_test, y_train, y_test = train_test_split(X, y,shuffle=False,test_size=0.20)
 
-            # Setto le dimensioni di train e test
-            total_size = len(X)
-            train_size = math.floor(total_size / 100 * 80)
-            test_size = total_size - train_size
-            # print("Total "+str(len(X))+" train size "+str(train_size)+" test size "+str(test_size))
+            # print("Righe valide in input: ",righe_non_nulle)
+            # print(str(tuple))
 
-            # Divido i dati in train e test
-            X_train = X[:train_size]
-            X_test = X[train_size:total_size]
+            activators = ['logistic', 'tanh', 'relu']
+            solvers = ['lbfgs','sgd', 'adam']
+            learning_rates = ['constant', 'invscaling', 'adaptive']
 
-            y_train = y[:train_size]
-            y_test = y[train_size:total_size]
-            # X_train, X_test, y_train, y_test = train_test_split(X, y,random_state=1)
+            current_score_for_activator = 0
+            best_score_for_activator = -9
+            best_activator = ''
+
+            best_solver_for_activator = ''
+            best_rate_for_activator = ''
+            best_neurons_for_activator = 0
+            best_iters_for_activator = 0
+
+            for activator in activators:#ACTIVATOR -------------------------------------------
+                print("")
+                print(current_store+"/"+activator)
+            
+                current_score_for_solver = 0
+                best_score_for_solver = -9
+                best_solver = ''
+
+                best_rate_for_solver = ''
+                best_neurons_for_solver = 0
+                best_iters_for_solver = 0
+            
+                for solver in solvers:# SOLVER -----------------------------------------------------------------
+                    print("")
+                    print(current_store+"/"+activator+"/"+solver)
+
+                    current_score_for_rate = 0
+                    best_score_for_rate = -9
+                    best_rate = ''
+
+                    best_neurons_for_rate = 0
+                    best_iters_for_rate = 0
+                    
+                    for learning_rate in learning_rates:# LEARING RATE ---------------------------------------------------
+                        print("")
+                        print(current_store+"/"+activator+"/"+solver+"/"+learning_rate)
+
+                        best_score_for_neuron = -9
+                        current_score_for_neuron = 0
+                        best_neuron = 0
+
+                        best_iters_for_neuron = 0
+
+                        for neurons in range (10,1000,10):# NEURONS --------------------------------------------------------------
+                            print(current_store+"/"+activator+"/"+solver+"/"+learning_rate+"/"+str(neurons))
+                            hidden_layers = 1
+                            neurons_per_layer = neurons
+                            tuple = (neurons_per_layer,)
+                            for i in range(1,hidden_layers):
+                                tuple = tuple + (neurons_per_layer,)
+
+                        
+                            best_score_for_iter = -9 
+                            current_score_for_iter = 0
+                            best_iters = 0
+
+                            for iters in range(100,2000,50):# ITERATIONS ----------------------------------------------------------------------
+                                # Alleno il modello
+                                regr = MLPRegressor(
+                                    activation=activator,
+                                    solver=solver,
+                                    hidden_layer_sizes=tuple,
+                                    max_iter=iters,
+                                    random_state=35,
+                                    learning_rate=learning_rate
+                                    ).fit(X_train, y_train)
+                                
+                                # print("PESI: "+str(regr.coefs_[0][0]))
+                                # Predico su X_test
+                                y_pred = regr.predict(X_test)
+                                y_pred = y_pred.clip(min=0)
+                                # Calcolo score
+                                current_score_for_iter = regr.score(X_test, y_test)
+                                # print("\t\t\t\t\tIters: "+str(iters)+" -> "+str(np.round(current_score_iters,3)))
+                                print(current_store+"/"+activator+"/"+solver+"/"+learning_rate+"/"+str(neurons)+"/"+str(iters)+" ["+str(current_score_for_iter)+"]")
+
+                                # CONTROLLO SCORE ITERS
+                                if(current_score_for_iter > best_score_for_iter):
+                                    best_score_for_iter = current_score_for_iter
+                                    current_score_for_neuron = best_score_for_iter
+
+                                    best_iters = iters
+                                else:
+                                    current_score_for_neuron = best_score_for_iter
+                                    input("current_score_for_iter < best_score_for_iter "+str(current_score_for_iter)+" < "+str(best_score_for_iter))
+                                    break
+                            
+                            # CONTROLLO SCORE NEURONS
+                            if(current_score_for_neuron > best_score_for_neuron):
+                                best_score_for_neuron = current_score_for_neuron
+                                current_score_for_rate = best_score_for_neuron
+
+                                best_neuron = neurons
+                                best_iters_for_neuron = best_iters
+                            else:
+                                current_score_for_rate = best_score_for_neuron
+                                input("current_score_for_neuron < best_score_for_neuron "+str(current_score_for_neuron)+" < "+str(best_score_for_neuron))
+                                break
+
+                        #CONTROLLO SCORE LEARNING RATE
+                        if(current_score_for_rate > best_score_for_rate):
+                            best_score_for_rate = current_score_for_rate
+                            current_score_for_solver = best_score_for_rate
+
+                            best_rate = learning_rate
+                            best_neurons_for_rate = best_neuron
+                            best_iters_for_rate = best_iters_for_neuron
+                        else:
+                            current_score_for_solver = best_score_for_rate
+                            input("Press Enter to continue...")
+                            break
+                    
+                    #CONTROLLO SCORE SOLVER
+                    if(current_score_for_solver > best_score_for_solver):
+                        best_score_for_solver = current_score_for_solver
+                        current_score_for_activator = best_score_for_solver
+
+                        best_solver = solver
+                        best_rate_for_solver = best_rate
+                        best_neurons_for_solver = best_neurons_for_rate
+                        best_iters_for_solver = best_iters_for_rate
+                    else:
+                        current_score_for_activator = best_score_for_solver
+                        input("Press Enter to continue...")
+                        break
+                
+                #CONTROLLO SCORE ACTIVATOR
+                if(current_score_for_activator > best_score_for_activator):
+                    best_score_for_activator = current_score_for_activator
+                    
+                    best_activator = activator
+                    best_solver_for_activator = best_solver
+                    best_rate_for_activator = best_rate_for_solver
+                    best_neurons_for_activator = best_neurons_for_solver
+                    best_iters_for_activator = best_iters_for_solver
+                else:
+                    best_score_for_activator = current_score_for_activator
+                    input("Press Enter to continue...")
+                    break
+            
+            print("END!")
+            print("Best activator ",best_activator)
+            print("Best solver ",best_solver_for_activator)
+            print("Best learning rate ",best_rate_for_activator)
+            print("Best neurons ",best_neurons_for_activator)
+            print("Best iterations ",best_iters_for_activator)
 
             hidden_layers = 1
-            neurons_per_layer = 100
+            neurons_per_layer = best_neurons_for_activator
             tuple = (neurons_per_layer,)
             for i in range(1,hidden_layers):
                 tuple = tuple + (neurons_per_layer,)
-            # print(tuple)
-
-            # activator = 'identity'
 
             # Alleno il modello
             regr = MLPRegressor(
-                solver='adam',
-                activation='identity',
-                hidden_layer_sizes=(20000,),
-                max_iter=5000,
-                random_state=42,
-                learning_rate='constant'
+                activation=best_activator,
+                solver=best_solver_for_activator,
+                hidden_layer_sizes=tuple,
+                max_iter=best_iters_for_activator,
+                random_state=35,
+                learning_rate=best_rate_for_activator
                 ).fit(X_train, y_train)
+            
+            # print("PESI: "+str(regr.coefs_[0][0]))
 
             # Predico su X_test
             y_pred = regr.predict(X_test)
+            y_pred = y_pred.clip(min=0)
 
-            # Stampo l'accuracy
             score = regr.score(X_test, y_test)
+            print("Score: ",score)
+                    
+            # Imposto titolo
+            title = "Prod: "+prodotto+" Store: "+current_store+" score: "+str(score)
+            if(best_score_for_iter>0):
+                scores.append(best_score_for_iter)
+            # print("Score: ",np.round(score, 2))
+
+            # Mostro i risultati
+            myplot2(df['data_format_date'],y,y_pred,title)
+            print("\n")                   
+
+        else:
+            print("\n"+current_store+" non vende "+prodotto+"\n")                    
+
+
             # print("Hidden Layers: "+str(hidden_layers)+
             # " Neurons per layer: "+str(neurons_per_layer)+
             # " activator "+activator+"\nScore: "+score)
@@ -302,16 +457,7 @@ for category in categories:
             # print(y_test)
             # print(y_pred)
             
-            # Imposto titolo
-            title = "Prod: "+prodotto+" Store: "+current_store+" score: "+str(score)
-            if(score>0):
-                scores.append(score)
-            # print("Score: "+str(score))
-
-            # Mostro i risultati
-            myplot2(df['data_format_date'],y,y_pred,title)
-            # print("\n")
-        else:
-            print("\n"+current_store+" non vende "+prodotto+"\n") 
+                        
+        
 print("Media score: "+str(sum(scores) / n_stores))
 print("Tempo %.2f s\n" % (time.time() - t))
