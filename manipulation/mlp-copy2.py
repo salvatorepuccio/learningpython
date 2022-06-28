@@ -17,8 +17,8 @@ import time
 from sklearn import metrics
 import seaborn as sns
 import warnings
+from sklearn.exceptions import ConvergenceWarning
 warnings.filterwarnings("ignore")
-
 # prende una data di inizio e una data di fine (stringhe) e restituisce una lista di tutti i giorni in mezzo
 def fill_dates(date_start,date_end):
     # filling data_format
@@ -77,7 +77,7 @@ def somma_duplicate(df):
         
 def myplot2(x,y,y1,title):
     fig, ax = plt.subplots()
-    ax = plt.gca()
+    ax = plt.gca() 
     formatter = mdates.DateFormatter("%Y-%m-%d")
     ax.xaxis.set_major_formatter(formatter)
     locator = mdates.WeekdayLocator(interval=4)
@@ -197,7 +197,6 @@ client.execute("use chpv")
 #140310420     KINDER CARDS LATTE/CAC. GR.128
 #148500405     PERONI BIRRA CL.33X3
 #  ----------------------------------------------
-
 iperstores = ['IPERSTORE 01','IPERSTORE 02', 'IPERSTORE 03', 'IPERSTORE 04']
 superstores = ['SUPERSTORE 01','SUPERSTORE 02','SUPERSTORE 03','SUPERSTORE 04','SUPERSTORE 05','SUPERSTORE 06','SUPERSTORE 07','SUPERSTORE 08','SUPERSTORE 09','SUPERSTORE 10','SUPERSTORE 11','SUPERSTORE 12','SUPERSTORE 13','SUPERSTORE 14','SUPERSTORE 15']
 supermarkets = ['SUPERMARKET 01','SUPERMARKET 02','SUPERMARKET 03','SUPERMARKET 04','SUPERMARKET 05','SUPERMARKET 06','SUPERMARKET 07','SUPERMARKET 08','SUPERMARKET 09','SUPERMARKET 10','SUPERMARKET 11','SUPERMARKET 12','SUPERMARKET 13','SUPERMARKET 14']
@@ -254,7 +253,6 @@ for category in categories:
             # X = df[['day_of_year','unit_price','flag_off']].to_numpy()
         
             X_train, X_test, y_train, y_test = train_test_split(X, y,shuffle=False,test_size=0.20)
-
             # print("Righe valide in input: ",righe_non_nulle)
             # print(str(tuple))
 
@@ -262,185 +260,82 @@ for category in categories:
             solvers = ['lbfgs','sgd', 'adam']
             learning_rates = ['constant', 'invscaling', 'adaptive']
 
-            current_score_for_activator = 0
-            best_score_for_activator = -9
-            best_activator = ''
-
-            best_solver_for_activator = ''
-            best_rate_for_activator = ''
-            best_neurons_for_activator = 0
-            best_iters_for_activator = 0
-
-            for activator in activators:#ACTIVATOR -------------------------------------------
-                print("")
-                print(current_store+"/"+activator)
-            
-                current_score_for_solver = 0
-                best_score_for_solver = -9
-                best_solver = ''
-
-                best_rate_for_solver = ''
-                best_neurons_for_solver = 0
-                best_iters_for_solver = 0
-            
-                for solverr in solvers:# SOLVER -----------------------------------------------------------------
-                    print("")
-                    print(current_store+"/"+activator+"/"+solverr)
-
-                    current_score_for_rate = 0
-                    best_score_for_rate = -9
-                    best_rate = ''
-
-                    best_neurons_for_rate = 0
-                    best_iters_for_rate = 0
-                    
-                    for learning_rate in learning_rates:# LEARING RATE ---------------------------------------------------
-                        print("")
-                        print(current_store+"/"+activator+"/"+solverr+"/"+learning_rate)
-
-                        best_score_for_neuron = -9
-                        current_score_for_neuron = 0
-                        best_neuron = 0
-
-                        best_iters_for_neuron = 0
-
-                        for neurons in range(10,1000,10):# NEURONS --------------------------------------------------------------
-                            print(current_store+"/"+activator+"/"+solverr+"/"+learning_rate+"/"+str(neurons))
-                            hidden_layers = 1
-                            neurons_per_layer = neurons
-                            tuple = (neurons_per_layer,)
-                            for i in range(1,hidden_layers):
-                                tuple = tuple + (neurons_per_layer,)
-
-                        
-                            best_score_for_iter = -9 
-                            current_score_for_iter = 0
-                            best_iters = 0
-
-                            for iters in range(100,2000,50):# ITERATIONS ----------------------------------------------------------------------
-                                # Alleno il modello
-                                regr = MLPRegressor(
-                                    activation=activator,
-                                    solver=solverr,
-                                    hidden_layer_sizes=tuple,
-                                    max_iter=iters,
-                                    random_state=35,
-                                    learning_rate=learning_rate
-                                    ).fit(X_train, y_train)
-                                
-                                # print("PESI: "+str(regr.coefs_[0][0]))
-                                # Predico su X_test
-                                y_pred = regr.predict(X_test)
-                                y_pred = y_pred.clip(min=0)
-                                # Calcolo score
-                                current_score_for_iter = regr.score(X_test, y_test)
-                                # print("\t\t\t\t\tIters: "+str(iters)+" -> "+str(np.round(current_score_iters,3)))
-                                # print(current_store+"/"+activator+"/"+solver+"/"+learning_rate+"/"+str(neurons)+"/"+str(iters)+" ["+str(current_score_for_iter)+"]")
-
-                                # CONTROLLO SCORE ITERS
-                                if(current_score_for_iter >= best_score_for_iter):
-                                    best_score_for_iter = current_score_for_iter
-                                    current_score_for_neuron = best_score_for_iter
-
-                                    best_iters = iters
-                                else:
-                                    current_score_for_neuron = best_score_for_iter
-                                    input(current_store+"/"+activator+"/"+solverr+"/"+learning_rate+"/"+str(neurons)+"/"+str(best_iters)+" ["+str(best_score_for_iter)+"]")
-                                    break
-                            
-                            # CONTROLLO SCORE NEURONS
-                            if(current_score_for_neuron >= best_score_for_neuron):
-                                best_score_for_neuron = current_score_for_neuron
-                                current_score_for_rate = best_score_for_neuron
-
-                                best_neuron = neurons
-                                best_iters_for_neuron = best_iters
-                            else:
-                                current_score_for_rate = best_score_for_neuron
-                                input(current_store+"/"+activator+"/"+solverr+"/"+learning_rate+"/"+str(best_neuron)+"/"+str(best_iters_for_neuron)+" ["+str(best_score_for_neuron)+"]")                                
-                                break
-
-                        # CONTROLLO SCORE LEARNING RATE
-                        if(current_score_for_rate >= best_score_for_rate):
-                            best_score_for_rate = current_score_for_rate
-                            current_score_for_solver = best_score_for_rate
-
-                            best_rate = learning_rate
-                            best_neurons_for_rate = best_neuron
-                            best_iters_for_rate = best_iters_for_neuron
-                        else:
-                            current_score_for_solver = best_score_for_rate
-                            input(current_store+"/"+activator+"/"+solverr+"/"+best_rate+"/"+str(best_neurons_for_rate)+"/"+str(best_iters_for_rate)+" ["+str(best_score_for_rate)+"]")                            
-                            break
-                    
-                    # CONTROLLO SCORE SOLVER
-                    if(current_score_for_solver >= best_score_for_solver):
-                        best_score_for_solver = current_score_for_solver
-                        current_score_for_activator = best_score_for_solver
-
-                        best_solver = solverr
-                        best_rate_for_solver = best_rate
-                        best_neurons_for_solver = best_neurons_for_rate
-                        best_iters_for_solver = best_iters_for_rate
-                    else:
-                        current_score_for_activator = best_score_for_solver
-                        input(current_store+"/"+activator+"/"+best_solver+"/"+best_rate_for_solver+"/"+str(best_neurons_for_solver)+"/"+str(best_iters_for_solver)+" ["+str(best_score_for_solver)+"]")
-                        break
-                
-                # CONTROLLO SCORE ACTIVATOR
-                if(current_score_for_activator >= best_score_for_activator):
-                    best_score_for_activator = current_score_for_activator
-                    
-                    best_activator = activator
-                    best_solver_for_activator = best_solver
-                    best_rate_for_activator = best_rate_for_solver
-                    best_neurons_for_activator = best_neurons_for_solver
-                    best_iters_for_activator = best_iters_for_solver
-                else:
-                    best_score_for_activator = current_score_for_activator
-                    input(current_store+"/"+best_activator+"/"+best_solver_for_activator+"/"+best_rate_for_activator+"/"+str(best_neurons_for_activator)+"/"+str(best_iters_for_activator)+" ["+str(best_score_for_activator)+"]")
-                    break
-            
-            print("END!")
-            print("Best activator ",best_activator)
-            print("Best solver ",best_solver_for_activator)
-            print("Best learning rate ",best_rate_for_activator)
-            print("Best neurons ",best_neurons_for_activator)
-            print("Best iterations ",best_iters_for_activator)
-
-            hidden_layers = 1
-            neurons_per_layer = best_neurons_for_activator
-            tuple = (neurons_per_layer,)
-            for i in range(1,hidden_layers):
-                tuple = tuple + (neurons_per_layer,)
-
-            # Alleno il modello
-            regr = MLPRegressor(
-                activation=best_activator,
-                solver=best_solver_for_activator,
-                hidden_layer_sizes=tuple,
-                max_iter=best_iters_for_activator,
-                random_state=35,
-                learning_rate=best_rate_for_activator
-                ).fit(X_train, y_train)
-            
-            # print("PESI: "+str(regr.coefs_[0][0]))
-
-            # Predico su X_test
-            y_pred = regr.predict(X_test)
+            mlp_gs = MLPRegressor()
+            parameter_space = {
+                'hidden_layer_sizes': range(10,100,10),
+                # [(10,),(20,),(30,),(40,),(50,),(60,),(70,),(80,),(90,),(100,)],
+                'activation': activators,
+                'solver': solvers,
+                'learning_rate': learning_rates,
+                'max_iter' : range(100,300,50),
+                'random_state' : [35] 
+            }
+            from sklearn.model_selection import GridSearchCV
+            t = time.time()
+            clf = GridSearchCV(mlp_gs,parameter_space, n_jobs=-1, cv=5,refit=True,scoring='neg_median_absolute_error')
+            clf.fit(X_train, y_train) # X is train samples and y is the corresponding labels
+            y_pred = clf.predict(X_test)
             y_pred = y_pred.clip(min=0)
+            score = clf.score(X_test,y_test)
 
-            score = regr.score(X_test, y_test)
+            print('\n\n\n\nBest parameters found:\n', clf.best_params_)
+            print("neg_median_absolute_error")
             print("Score: ",score)
-                    
-            # Imposto titolo
+            input("Tempo %.2f s\n" % (time.time() - t))
+
+            # regr = MLPRegressor(
+            #     activation=clf.best_params_['activation'],
+            #     solver=clf.best_params_['solver'],
+            #     hidden_layer_sizes=clf.best_params_['hidden_layer_sizes'],
+            #     max_iter=clf.best_params_['max_iter'],
+            #     random_state=35,
+            #     learning_rate=clf.best_params_['learning_rate']
+            #     ).fit(X_train, y_train)
+
+            # y_pred = regr.predict(X_test)
+            # y_pred = y_pred.clip(min=0)
+
+            # Calcolo score
+            # score = regr.score(X_test, y_test)
+
+             # Imposto titolo
             title = "Prod: "+prodotto+" Store: "+current_store+" score: "+str(score)
-            if(best_score_for_iter>0):
-                scores.append(best_score_for_iter)
+            # if(score>0):
+            #     scores.append(score)
             # print("Score: ",np.round(score, 2))
 
             # Mostro i risultati
             myplot2(df['data_format_date'],y,y_pred,title)
+            print("\n") 
+
+            # means = clf.cv_results_['mean_test_score']
+            # stds = clf.cv_results_['std_test_score']
+            # # for mean, std, params in zip(means, stds, clf.cv_results_['params']):
+            # #     print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
+
+            # y_test, y_pred = y_test , clf.predict(X_test)
+            # from sklearn.metrics import classification_report
+            # print('Results on the test set:')
+            # print(classification_report(y_test, y_pred))
+
+            
+            # print("PESI: "+str(regr.coefs_[0][0]))
+
+            # Predico su X_test
+            # y_pred = regr.predict(X_test)
+            # y_pred = y_pred.clip(min=0)
+
+            # score = regr.score(X_test, y_test)
+            # print("Score: ",score)
+                    
+            # # Imposto titolo
+            # title = "Prod: "+prodotto+" Store: "+current_store+" score: "+str(score)
+            # if(best_score_for_iter>0):
+            #     scores.append(best_score_for_iter)
+            # # print("Score: ",np.round(score, 2))
+
+            # # Mostro i risultati
+            # myplot2(df['data_format_date'],y,y_pred,title)
             print("\n")                   
 
         else:

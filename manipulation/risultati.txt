@@ -1,0 +1,58 @@
+explained_variance 
+        0,02928...
+
+
+max_error
+
+
+neg_mean_absolute_error:
+    {'activation': 'tanh', 'hidden_layer_sizes': 90, 'learning_rate': 'constant', 'max_iter': 250, 'random_state': 35, 'solver': 'adam'}
+    Score:  -6.814298529402206
+    risultato non malissimo
+
+
+neg_mean_squared_error:
+    {'activation': 'tanh', 'hidden_layer_sizes': 50, 'learning_rate': 'constant', 'max_iter': 200, 'random_state': 35, 'solver': 'lbfgs'}
+    Score:  -176.9830187214179
+    risultato non malissimo
+
+
+neg_root_mean_squared_error:
+    {'activation': 'tanh', 'hidden_layer_sizes': 80, 'learning_rate': 'constant', 'max_iter': 200, 'random_state': 35, 'solver': 'lbfgs'}
+    -11.483647771708585
+    risultato buono...
+
+neg_mean_squared_log_error:
+    {'activation': 'logistic', 'hidden_layer_sizes': 10, 'learning_rate': 'constant', 'max_iter': 100, 'random_state': 35, 'solver': 'adam'}
+    Score:  -1.1019524241190841
+    Risultato pessimo, linea dritta
+
+
+neg_median_absolute_error:
+    
+
+
+r2
+
+metrics.r2_score
+
+neg_mean_poisson_deviance
+
+
+neg_mean_gamma_deviance
+
+
+neg_mean_absolute_percentage_error:
+    {'activation': 'tanh', 'hidden_layer_sizes': 80, 'learning_rate': 'constant', 'max_iter': 250, 'random_state': 35, 'solver': 'adam'}
+    Score:  -987582342655467.6
+    risultato non malissimo
+
+
+d2_absolute_error_score:
+
+
+
+d2_pinball_score
+
+
+d2_tweedie_score
