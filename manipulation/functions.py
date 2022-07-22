@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from enum import Enum
 
-def fill_dates(date_start,date_end):
+from sqlalchemy import column
+
+def get_calendar(date_start,date_end):
     # filling data_format
     dates = pd.date_range(date_start,date_end)
     ret = []
@@ -21,7 +23,7 @@ def get_day_in_year(l):
 
 # mette degli 0 nella date in cui non ci sono state vendite
 def fill_dataframe(df,df_columns):
-    full_calendar = fill_dates(str(df['data_format_date'][0]),str(df['data_format_date'][len(df)-1]))
+    full_calendar = get_calendar(str(df['data_format_date'][0]),str(df['data_format_date'][len(df)-1]))
     j = 0
     N_date_mancanti = 0
     for curr_date in full_calendar:
@@ -43,7 +45,7 @@ def fill_dataframe(df,df_columns):
     return df
 
 def fill_dataframe_all_stores(df,df_columns):
-    full_calendar = fill_dates(str(df['data_format_date'][0]),str(df['data_format_date'][len(df)-1]))
+    full_calendar = get_calendar(str(df['data_format_date'][0]),str(df['data_format_date'][len(df)-1]))
     j = 0
     N_date_mancanti = 0
     for curr_date in full_calendar:
@@ -78,7 +80,7 @@ def somma_duplicate(df):
             end -= 1
 
         data_prec = str(df['data_format_date'][i])
-    # print("Eliminate "+str(eliminate)+" duplicazioni")
+    print("Eliminate "+str(eliminate)+" duplicazioni")
     df = df.reset_index(drop=True)
     return df
         
@@ -99,7 +101,7 @@ def myplot2(x,y,y1,title):
     mng.full_screen_toggle()
     plt.show()
 
-def myplot(x,y):
+def myplot(x,y,fullscreen: bool):
     fig, ax = plt.subplots()
     ax = plt.gca()
     formatter = mdates.DateFormatter("%Y-%m-%d")
@@ -109,8 +111,36 @@ def myplot(x,y):
     plt.grid(True)
     plt.gcf().autofmt_xdate()
     ax.plot(x,y,linewidth=1)
-    mng = plt.get_current_fig_manager()
-    mng.full_screen_toggle()
+    if(fullscreen):
+        mng = plt.get_current_fig_manager()
+        mng.full_screen_toggle()
+    plt.show()
+
+def myplot_multi(x,y1,y2,title1: str, title2: str,fullscreen: bool):
+    fig, axs = plt.subplots(2)
+
+    formatter = mdates.DateFormatter("%Y-%m-%d")
+    axs[0].xaxis.set_major_formatter(formatter)
+    axs[1].xaxis.set_major_formatter(formatter)
+
+    locator = mdates.WeekdayLocator(interval=4)
+    axs[0].xaxis.set_major_locator(locator)
+    axs[1].xaxis.set_major_locator(locator)
+
+    axs[0].grid(True)
+    axs[1].grid(True)
+    plt.gcf().autofmt_xdate()
+
+    axs[0].plot(x,y1,linewidth=1)
+    axs[1].plot(x,y2,linewidth=1)
+
+    axs[0].set_title(title1)
+    axs[1].set_title(title2)
+
+    if(fullscreen):
+        mng = plt.get_current_fig_manager()
+        mng.full_screen_toggle()
+
     plt.show()
 
 def print_all(df):
@@ -120,7 +150,7 @@ def print_all(df):
 def get_day_in_week(df_col):
     ret = []
     for x in df_col:
-        ret.append(x.weekday())
+        ret.append((x.weekday())+1)
     return ret
 
 def get_week_in_year(df_col):
@@ -173,7 +203,7 @@ def convert_flag_to_bool(df_flag):
             print("Flag: "+str(x))
     return ret
 
-def stophere():
+def stop():
     raise SystemExit(0)  
 
 def scala(X_train):
@@ -199,3 +229,32 @@ def convert_and_get_rag_soc_to_int(df_rag_soc):
         ret.append(appendme)
     return ret
         
+def fill_dataframe_visual(df,start,stop,row):
+    # full_calendar = fill_dates(str(df['data_format_date'][0]),str(df['data_format_date'][len(df)-1]))
+    full_calendar = get_calendar(start,stop)
+    j = 0
+    date_mancanti = []
+    N_date_mancanti = 0
+    for curr_date in full_calendar:
+        
+        if(str(curr_date) == str(df['data_format_date'].values[j])):
+            # Se la data corrente e' una di quelle in cui ho fatto una vendita, vai avanti
+            # print("La data e' presente "+str(curr_date))
+            j = j + 1
+        else:
+            # altrimenti metti una riga che indice che non ho venduto nulla
+            date_mancanti.append(curr_date)
+            new_row = [curr_date] + row
+            # new_row = [curr_date,0,0]#['data_format_date','qta','val','flag_off']
+            dff = pd.DataFrame([new_row],columns=list(df.columns))
+            df = pd.concat([df,dff])
+            N_date_mancanti += 1
+    
+    df["data_format_date"] = pd.to_datetime(df["data_format_date"])
+    df = df.sort_values(by="data_format_date")
+    print("Mancavano "+str(N_date_mancanti)+" date")
+    print("Date mancanti:")
+    for x in date_mancanti:
+        print(str(x))
+    df = df.reset_index(drop=True)
+    return df
